@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICGC - Management System Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f1f8e9 0%, #c8e6c9 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-card {
+            background-color: #ffffff;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .login-card h2 {
+            color: #1b5e20;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .login-card p {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #2e7d32;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .form-group input:focus {
+            border-color: #4caf50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
+        }
+
+        /* Error state */
+        .form-group input.error {
+            border-color: #d32f2f;
+            box-shadow: 0 0 5px rgba(211, 47, 47, 0.2);
+        }
+
+        .error-msg {
+            display: none;
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .error-msg.show { display: block; }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #2e7d32;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover { background-color: #1b5e20; }
+
+        /* Shake animation on wrong credentials */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%       { transform: translateX(-8px); }
+            40%       { transform: translateX(8px); }
+            60%       { transform: translateX(-6px); }
+            80%       { transform: translateX(6px); }
+        }
+
+        .shake { animation: shake 0.4s ease; }
+
+        .footer-links {
+            margin-top: 20px;
+            font-size: 0.8rem;
+        }
+
+        .footer-links a {
+            color: #4caf50;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover { text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 24px 18px;
+                margin: 0 12px;
+                border-radius: 12px;
+            }
+            .logo { width: 90px; }
+            .login-card h2 { font-size: 1.25rem; }
+            .login-btn { font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card" id="loginCard">
+        <img src="ICGCNCT.PNG" alt="ICGC Logo" class="logo">
+
+        <h2>Church Management</h2>
+        <p>Log in with your account credentials</p>
+
+        <div class="error-msg" id="errorMsg">
+            ❌ Incorrect username or password. Please try again.
+        </div>
+
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="Enter username" autocomplete="username">
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter password" autocomplete="current-password">
+        </div>
+
+        <button class="login-btn" onclick="handleLogin()">Login</button>
+
+        <div class="footer-links">
+            <a href="#">Forgot password?</a>
+        </div>
+    </div>
+
+    <script>
+        // Allow pressing Enter to trigger login
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') handleLogin();
+        });
+
+        function handleLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const card     = document.getElementById('loginCard');
+            const userInput = document.getElementById('username');
+            const passInput = document.getElementById('password');
+
+            // Clear previous error state
+            errorMsg.classList.remove('show');
+            userInput.classList.remove('error');
+            passInput.classList.remove('error');
+
+            if (username === 'admin' && password === 'admin') {
+                // Correct — redirect to dashboard
+                window.location.href = 'h2.html';
+            } else {
+                // Wrong — show error and shake the card
+                errorMsg.classList.add('show');
+                userInput.classList.add('error');
+                passInput.classList.add('error');
+
+                card.classList.remove('shake');
+                void card.offsetWidth; // force reflow for re-trigger
+                card.classList.add('shake');
+
+                // Clear the password field only
+                document.getElementById('password').value = '';
+            }
+        }
+    </script>
+
+</body>
+</html>
