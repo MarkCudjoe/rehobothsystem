@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -296,7 +296,7 @@
 
         .modal {
             background: var(--white);
-            padding: 30px;
+            padding: 70px 20px 30px 20px;
             border-radius: 12px;
             width: 440px;
             max-width: 95%;
@@ -330,6 +330,8 @@
             font-size: 0.9rem;
             outline: none;
             transition: border-color 0.2s;
+                    background-color: #ffffff !important;
+            color: #222 !important;
         }
 
         .form-group input:focus,
@@ -515,7 +517,9 @@
             .control-group input[type="date"] {
                 flex: 1;
                 min-width: 0;
-            }
+                        background-color: #ffffff !important;
+            color: #222 !important;
+        }
 
             .present-counter {
                 width: 100%;
@@ -579,18 +583,69 @@
             }
         }
 
+
+        /* ── Dark Mode Variables ─────────────────────────────── */
+        [data-theme="dark"] {
+            --bg:#121212; --card-bg:#1e1e1e; --card-shadow:0 2px 10px rgba(0,0,0,0.4);
+            --border:#333; --text:#e0e0e0; --subtext:#aaa; --text-grey:#aaa;
+            --white:#1e1e1e; --light-green:#1b3a1f;
+            --primary-green:#43a047; --dark-green:#2e7d32;
+        }
+        body { transition: background 0.3s, color 0.3s; }
+        .stat-card, .modal, .member-table-container, .inventory-card,
+        .attendance-card, .table-container, .finance-form, .controls-card,
+        .finance-grid > div, .notes-card, .activity-card {
+            background: var(--card-bg) !important;
+            color: var(--text) !important;
+        }
+        .main-content { background: var(--bg); }
+        table th, table td { color: var(--text); }
+        .form-group input, .form-group select,
+        .modal-form-group input, .modal-form-group select,
+        .search-input, .notes-ta {
+            background: var(--bg) !important;
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+        }
+
+        /* ── Top Bar ─────────────────────────────────────────── */
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 52px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; z-index: 1000;
+            background: var(--bg, #f4f7f6); border-bottom: 1px solid var(--border, #e0e0e0);
+            transition: background 0.3s;
+        }
+        .top-right { display: flex; gap: 8px; align-items: center; }
+        .icon-btn {
+            background: var(--card-bg, #fff); border: 1px solid var(--border, #ddd);
+            color: var(--text, #333); padding: 6px 12px; border-radius: 6px;
+            cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: 0.2s;
+        }
+        .icon-btn:hover { border-color: var(--primary-green, #2e7d32); }
+
+        /* Church branch subtitle in sidebar */
+        .church-branch { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-top: 3px; }
     </style>
 </head>
 <body>
 
-    <div id="overlay" onclick="toggleSidebar()"></div>
-
+    
+<!-- Top Bar -->
+<div class="top-bar">
     <button class="menu-btn" onclick="toggleSidebar()">☰ MENU</button>
+    <div class="top-right">
+        <button class="icon-btn" id="darkBtn" onclick="toggleDark()">🌙 Dark</button>
+    </div>
+</div>
+
+<div id="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <img src="ICGCNCT.PNG" alt="Logo">
-            <h3>ICGC Admin</h3>
+            <h3 id="sidebarName">ICGC Admin</h3>
+        <div class="church-branch" id="sidebarBranch"></div>
         </div>
         <ul class="nav-menu">
             <a href="h2.html" style="text-decoration: none; color: inherit;">
@@ -608,6 +663,7 @@
             <a href="attendance.html" style="text-decoration: none; color: inherit;">
                 <li class="nav-item">Attendance</li>
             </a>
+            <a href="scanner.html" style="text-decoration:none;color:inherit;"><li class="nav-item">📷 QR Scanner</li></a>
         </ul>
     </div>
 
@@ -636,6 +692,14 @@
                 <h3>Needs Repair</h3>
                 <p>5</p>
             </div>
+        </div>
+
+        <!-- Low Stock / Reorder Alerts -->
+        <div id="lowStockPanel" style="display:none; background:var(--card-bg,white); border-radius:12px;
+                    padding:18px 22px; box-shadow:0 2px 10px rgba(0,0,0,0.05);
+                    border-left:5px solid #ff9800; margin-bottom:18px;">
+            <h3 style="color:#e65100; font-size:0.95rem; margin-bottom:10px;">⚠️ Low Stock / Reorder Alerts</h3>
+            <div id="lowStockList" style="font-size:0.88rem;"></div>
         </div>
 
         <h2 class="section-title">Asset Directory</h2>
@@ -687,6 +751,10 @@
             <div class="form-group">
                 <label>Quantity</label>
                 <input type="number" id="assetQty" placeholder="e.g. 4" min="0">
+            </div>
+            <div class="form-group">
+                <label>Min. Quantity (reorder alert) <span style="font-size:0.78rem;color:#999;">optional</span></label>
+                <input type="number" id="assetMinQty" placeholder="e.g. 5 — alert when below this" min="0">
             </div>
             <div class="form-group">
                 <label>Condition</label>
@@ -802,15 +870,34 @@
             });
         }
 
+        // ── Low Stock / Reorder Check ─────────────────────────
+        function checkLowStock() {
+            const list   = getAssets();
+            const alerts = list.filter(a => a.minQty && parseInt(a.qty) < parseInt(a.minQty));
+            const panel  = document.getElementById('lowStockPanel');
+            const el     = document.getElementById('lowStockList');
+            if (!alerts.length) { panel.style.display = 'none'; return; }
+            panel.style.display = 'block';
+            el.innerHTML = alerts.map(a => `
+                <div style="display:flex;justify-content:space-between;align-items:center;
+                            padding:7px 0;border-bottom:1px solid var(--border,#eee);">
+                    <span>📦 <strong>${a.name}</strong> <span style="color:#999;font-size:0.8rem;">(${a.category})</span></span>
+                    <span style="color:#c62828;font-weight:bold;font-size:0.82rem;">
+                        Qty: ${a.qty} &nbsp;/&nbsp; Min: ${a.minQty}
+                    </span>
+                </div>`).join('');
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            applyTheme();
+            applySettings();
             setAutoDate();
             loadAssets();
             renderTable();
+            checkLowStock();
             // Auto-filter if arriving from dashboard alerts card
             const params = new URLSearchParams(window.location.search);
             if (params.get('filter') === 'alerts') {
-                const searchInput = document.querySelector('.search-input');
-                // Show a visual indicator
                 const banner = document.createElement('div');
                 banner.style.cssText = `
                     background:#fff3e0; border:1px solid #ff9800; color:#e65100;
@@ -822,7 +909,6 @@
                     <span onclick="this.parentElement.remove(); filterTable('');"
                           style="cursor:pointer; font-size:1.1rem; color:#999;">✕</span>`;
                 document.querySelector('.inventory-card').prepend(banner);
-                // Filter to show only problem items
                 document.querySelectorAll('#inventoryBody tr').forEach(row => {
                     const hasIssue = row.querySelector('.tag-repair, .tag-missing');
                     row.style.display = hasIssue ? '' : 'none';
@@ -842,6 +928,7 @@
             document.getElementById('assetQty').value        = '';
             document.getElementById('assetCondition').value  = 'good';
             document.getElementById('assetDate').value       = '';
+            document.getElementById('assetMinQty').value     = '';
             document.getElementById('assetModal').classList.add('active');
         }
 
@@ -862,6 +949,7 @@
             document.getElementById('assetQty').value        = asset.qty;
             document.getElementById('assetCondition').value  = asset.condition;
             document.getElementById('assetDate').value       = parseDisplayDate(asset.date);
+            document.getElementById('assetMinQty').value     = asset.minQty || '';
             document.getElementById('assetModal').classList.add('active');
         }
 
@@ -869,29 +957,24 @@
             const name      = document.getElementById('assetName').value.trim();
             const category  = document.getElementById('assetCategory').value;
             const qty       = document.getElementById('assetQty').value.trim();
+            const minQty    = document.getElementById('assetMinQty').value.trim();
             const condition = document.getElementById('assetCondition').value;
             const dateVal   = document.getElementById('assetDate').value;
-
-            if (!name || !qty || !dateVal) {
-                showToast('⚠️ Please fill in all fields.', true);
-                return;
-            }
-
+            if (!name || !qty || !dateVal) { showToast('⚠️ Please fill in all fields.', true); return; }
             const displayDate = formatDate(dateVal);
             let list = getAssets();
-
             if (editingId) {
-                list = list.map(a => a.id === editingId
-                    ? { ...a, name, category, qty, condition, date: displayDate }
-                    : a);
+                list = list.map(a => a.id === editingId ? { ...a, name, category, qty, minQty, condition, date: displayDate } : a);
+                logActivity(`✏️ Inventory updated: ${name}`, 'inventory');
                 showToast('✅ Asset updated successfully!');
             } else {
-                list.push({ id: nextId(), name, category, qty, condition, date: displayDate });
+                list.push({ id: nextId(), name, category, qty, minQty, condition, date: displayDate });
+                logActivity(`📦 New asset registered: ${name}`, 'inventory');
                 showToast('✅ Asset registered successfully!');
             }
-
             saveAssets(list);
             renderTable();
+            checkLowStock();
             closeModal();
         }
 
@@ -911,7 +994,8 @@
                 saveAssets(getAssets().filter(a => a.id !== deletingId));
                 renderTable();
                 deletingId = null;
-                showToast('🗑️ Asset removed.');
+                logActivity('🗑️ Inventory asset removed', 'inventory');
+            showToast('🗑️ Asset removed.');
             }
             closeDeleteModal();
         }
@@ -979,6 +1063,40 @@
                 100%{opacity:0}}`;
             document.head.appendChild(s);
         }
+
+        // ── Dark Mode ─────────────────────────────────────────
+        function applyTheme() {
+            const t = localStorage.getItem('icgc_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+            const btn = document.getElementById('darkBtn');
+            if (btn) btn.textContent = t === 'dark' ? '☀ Light' : '🌙 Dark';
+        }
+        function toggleDark() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const next = isDark ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('icgc_theme', next);
+            const btn = document.getElementById('darkBtn');
+            if (btn) btn.textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
+        }
+
+        // ── Activity Logger ───────────────────────────────────
+        function logActivity(msg, type) {
+            const list = JSON.parse(localStorage.getItem('icgc_activity') || '[]');
+            list.push({ msg, type: type || 'member', ts: Date.now() });
+            if (list.length > 50) list.splice(0, list.length - 50);
+            localStorage.setItem('icgc_activity', JSON.stringify(list));
+        }
+
+        // ── Settings (church name in sidebar) ────────────────
+        function applySettings() {
+            const s = JSON.parse(localStorage.getItem('icgc_settings') || '{}');
+            const bn = document.getElementById('sidebarBranch');
+            const sn = document.getElementById('sidebarName');
+            if (bn && s.churchName) bn.textContent  = s.churchName;
+            if (sn && s.adminName)  sn.textContent  = s.adminName + ' Admin';
+        }
+
     </script>
 
 

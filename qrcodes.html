@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICGC — Church Check-In QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root { --green:#2e7d32; --dark:#1b5e20; --light:#e8f5e9; --bg:#f4f7f6; --card:#fff; }
+        body { font-family:'Segoe UI',Tahoma,sans-serif; background:var(--bg); min-height:100vh; }
+
+        .top-bar { background:var(--dark); color:white; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; }
+        .top-bar h1 { font-size:1.05rem; font-weight:700; }
+        .top-btn { background:rgba(255,255,255,0.15); border:none; color:white; padding:7px 14px; border-radius:6px; font-size:0.82rem; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; }
+        .top-btn.primary { background:white; color:var(--dark); }
+
+        .main { max-width:600px; margin:30px auto; padding:0 16px; }
+
+        .info-card { background:var(--light); border-left:4px solid var(--green); border-radius:10px; padding:16px 18px; margin-bottom:24px; font-size:0.88rem; color:#333; line-height:1.6; }
+        .info-card strong { color:var(--dark); }
+
+        .url-card { background:var(--card); border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,0.08); padding:22px; margin-bottom:20px; }
+        .url-card h2 { font-size:0.9rem; color:var(--dark); font-weight:700; margin-bottom:10px; }
+        .url-row { display:flex; gap:8px; }
+        .url-input { flex:1; padding:10px 12px; border:2px solid #ddd; border-radius:8px; font-size:0.88rem; font-family:monospace; color:#333; outline:none; }
+        .url-input:focus { border-color:var(--green); }
+        .copy-btn { background:var(--green); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:700; font-size:0.82rem; cursor:pointer; white-space:nowrap; }
+
+        .qr-card { background:var(--card); border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,0.08); padding:30px; text-align:center; margin-bottom:20px; }
+        .qr-card h2 { font-size:1rem; color:var(--dark); font-weight:700; margin-bottom:6px; }
+        .qr-card p { font-size:0.82rem; color:#888; margin-bottom:24px; }
+        #qrBox { width:260px; height:260px; margin:0 auto 20px; }
+        #qrBox img, #qrBox canvas { width:260px !important; height:260px !important; }
+        .church-label { font-size:1rem; font-weight:700; color:var(--dark); margin-bottom:4px; }
+        .scan-label { font-size:0.82rem; color:#888; }
+
+        .btn-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
+        .btn { padding:11px 24px; border:none; border-radius:8px; font-weight:700; font-size:0.88rem; cursor:pointer; }
+        .btn-green { background:var(--green); color:white; }
+        .btn-print { background:var(--dark); color:white; }
+
+        .how-card { background:var(--card); border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,0.08); padding:22px; }
+        .how-card h3 { color:var(--dark); font-size:0.95rem; margin-bottom:14px; }
+        .step { display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+        .step-num { width:28px; height:28px; border-radius:50%; background:var(--green); color:white; font-weight:800; font-size:0.85rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .step-text { font-size:0.88rem; color:#444; line-height:1.5; }
+
+        @media print {
+            .top-bar, .url-card, .info-card, .how-card, .btn-row { display:none !important; }
+            .qr-card { box-shadow:none; border:none; padding:20px; }
+            body { background:white; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <h1>🔲 Church Check-In QR Code</h1>
+    <div style="display:flex;gap:8px;">
+        <a href="scanner.html" class="top-btn">📋 Check-In Page</a>
+        <a href="h2.html" class="top-btn primary">Dashboard</a>
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="info-card">
+        <strong>How it works:</strong> This is your church's single check-in QR code. Print it and display it at the entrance. When members scan it with their phone camera, it opens the check-in page where they type their name and tap to mark themselves present. Ushers can also use it on their phones to check in elderly members or visitors.
+    </div>
+
+    <div class="url-card">
+        <h2>📎 Check-In Page URL</h2>
+        <div class="url-row">
+            <input type="text" class="url-input" id="urlInput" readonly>
+            <button class="copy-btn" onclick="copyURL()">📋 Copy</button>
+        </div>
+        <p style="font-size:0.78rem;color:#aaa;margin-top:8px;">
+            This is the URL the QR code points to. Share it directly or let members scan the QR below.
+        </p>
+    </div>
+
+    <div class="qr-card">
+        <h2>Church Entrance Check-In</h2>
+        <p>Display or print this QR code at the church entrance</p>
+        <div id="qrBox"></div>
+        <div class="church-label" id="churchLabel">ICGC Church</div>
+        <div class="scan-label">Scan to check in for today's service</div>
+        <div class="btn-row">
+            <button class="btn btn-green" onclick="downloadQR()">⬇ Download PNG</button>
+            <button class="btn btn-print" onclick="window.print()">🖨 Print</button>
+        </div>
+    </div>
+
+    <div class="how-card">
+        <h3>📖 Step-by-Step for Sundays</h3>
+        <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Print or display</strong> this QR code at the church entrance — on a banner, a screen, or a printed A4 sheet.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Members scan</strong> the QR code with their phone camera (no app needed). It opens the check-in page in their browser.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text"><strong>They type their name</strong>, see it in the list, and tap it. A ✅ confirmation appears and they're marked present.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Ushers help</strong> elderly members or visitors by doing the same on their phone — search the name, tap, done.</div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-text"><strong>Visitors</strong> use the "I am a Visitor" section to enter their name and check in without needing to be in the member list.</div></div>
+        <div class="step"><div class="step-num">6</div><div class="step-text"><strong>Attendance syncs</strong> automatically — open the <a href="attendance.html" style="color:var(--green);font-weight:600;">Attendance page</a> to see all check-ins and submit the final record.</div></div>
+    </div>
+
+</div>
+
+<script>
+    // Build the check-in URL — points to scanner.html in the same folder
+    const checkInURL = window.location.href.replace('qrcodes.html','scanner.html');
+    document.getElementById('urlInput').value = checkInURL;
+
+    // Church name from settings
+    const settings = JSON.parse(localStorage.getItem('icgc_settings') || '{}');
+    const churchName = settings.churchName || 'ICGC Church';
+    document.getElementById('churchLabel').textContent = churchName;
+
+    // Generate QR
+    new QRCode(document.getElementById('qrBox'), {
+        text: checkInURL,
+        width: 260, height: 260,
+        colorDark: '#1b5e20', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+    });
+
+    function copyURL() {
+        navigator.clipboard.writeText(checkInURL).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => btn.textContent = '📋 Copy', 2000);
+        });
+    }
+
+    function downloadQR() {
+        const canvas = document.getElementById('qrBox').querySelector('canvas');
+        if (!canvas) return;
+
+        // Add church name below QR on download
+        const out = document.createElement('canvas');
+        out.width  = 320; out.height = 360;
+        const ctx = out.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0,0,320,360);
+        ctx.drawImage(canvas, 30, 20, 260, 260);
+        ctx.fillStyle = '#1b5e20';
+        ctx.font = 'bold 18px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(churchName, 160, 305);
+        ctx.fillStyle = '#888';
+        ctx.font = '13px Segoe UI, sans-serif';
+        ctx.fillText('Scan to check in for today\'s service', 160, 328);
+
+        const a = document.createElement('a');
+        a.download = 'ICGC_CheckIn_QR.png';
+        a.href     = out.toDataURL('image/png');
+        a.click();
+    }
+</script>
+</body>
+</html>

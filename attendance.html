@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -200,6 +200,8 @@
             outline: none;
             transition: border-color 0.2s;
             color: #333;
+                    background-color: #ffffff !important;
+            color: #222 !important;
         }
 
         .control-group select:focus,
@@ -339,6 +341,34 @@
             transform: translateX(24px);
         }
 
+        /* --- Present / Absent Status Badge --- */
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .badge-present {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .badge-absent {
+            background: #ffcdd2;
+            color: #c62828;
+        }
+
+        .remove-btn {
+            color: #d32f2f;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .remove-btn:hover { text-decoration: underline; }
+
         /* --- Submit Button --- */
         .submit-bar {
             display: flex;
@@ -379,7 +409,7 @@
 
         .modal {
             background: var(--white);
-            padding: 30px;
+            padding: 70px 20px 30px 20px;
             border-radius: 12px;
             width: 420px;
             max-width: 95%;
@@ -413,6 +443,8 @@
             font-size: 0.9rem;
             outline: none;
             transition: border-color 0.2s;
+                    background-color: #ffffff !important;
+            color: #222 !important;
         }
 
         .form-group input:focus,
@@ -626,7 +658,9 @@
             .control-group input[type="date"] {
                 flex: 1;
                 min-width: 0;
-            }
+                        background-color: #ffffff !important;
+            color: #222 !important;
+        }
 
             .present-counter {
                 width: 100%;
@@ -690,18 +724,70 @@
             }
         }
 
+
+        /* ── Dark Mode Variables ─────────────────────────────── */
+        [data-theme="dark"] {
+            --bg:#121212; --card-bg:#1e1e1e; --card-shadow:0 2px 10px rgba(0,0,0,0.4);
+            --border:#333; --text:#e0e0e0; --subtext:#aaa; --text-grey:#aaa;
+            --white:#1e1e1e; --light-green:#1b3a1f;
+            --primary-green:#43a047; --dark-green:#2e7d32;
+        }
+        body { transition: background 0.3s, color 0.3s; }
+        .stat-card, .modal, .member-table-container, .inventory-card,
+        .attendance-card, .table-container, .finance-form, .controls-card,
+        .finance-grid > div, .notes-card, .activity-card {
+            background: var(--card-bg) !important;
+            color: var(--text) !important;
+        }
+        .main-content { background: var(--bg); }
+        table th, table td { color: var(--text); }
+        .form-group input, .form-group select,
+        .modal-form-group input, .modal-form-group select,
+        .search-input, .notes-ta {
+            background: var(--bg) !important;
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+        }
+
+        /* ── Top Bar ─────────────────────────────────────────── */
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 52px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; z-index: 1000;
+            background: var(--bg, #f4f7f6); border-bottom: 1px solid var(--border, #e0e0e0);
+            transition: background 0.3s;
+        }
+        .top-right { display: flex; gap: 8px; align-items: center; }
+        .icon-btn {
+            background: var(--card-bg, #fff); border: 1px solid var(--border, #ddd);
+            color: var(--text, #333); padding: 6px 12px; border-radius: 6px;
+            cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: 0.2s;
+        }
+        .icon-btn:hover { border-color: var(--primary-green, #2e7d32); }
+
+        /* Church branch subtitle in sidebar */
+        .church-branch { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-top: 3px; }
     </style>
+
 </head>
 <body>
 
-    <div id="overlay" onclick="toggleSidebar()"></div>
-
+    
+<!-- Top Bar -->
+<div class="top-bar">
     <button class="menu-btn" onclick="toggleSidebar()">☰ MENU</button>
+    <div class="top-right">
+        <button class="icon-btn" id="darkBtn" onclick="toggleDark()">🌙 Dark</button>
+    </div>
+</div>
+
+<div id="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <img src="ICGCNCT.PNG" alt="Logo">
-            <h3>ICGC Admin</h3>
+            <h3 id="sidebarName">ICGC Admin</h3>
+        <div class="church-branch" id="sidebarBranch"></div>
         </div>
         <ul class="nav-menu">
             <a href="h2.html" style="text-decoration: none; color: inherit;">
@@ -731,26 +817,51 @@
 
         <!-- Summary Cards -->
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="stat-card" onclick="openMemberListModal()" style="cursor:pointer;" title="Click to view all members">
                 <h3>Total Members</h3>
-                <p>1,240</p>
+                <p id="totalMembersCard">—</p>
+                <div style="font-size:0.72rem;color:var(--primary-green);margin-top:4px;font-weight:600;">👆 View All</div>
             </div>
             <div class="stat-card">
                 <h3>Present Today</h3>
-                <p id="presentCard">0</p>
+                <p id="presentCard" style="color:var(--primary-green);">0</p>
             </div>
             <div class="stat-card">
                 <h3>Absent Today</h3>
-                <p id="absentCard">3</p>
+                <p id="absentCard" style="color:#c62828;">0</p>
             </div>
             <div class="stat-card">
                 <h3>Avg. Attendance</h3>
-                <p>850</p>
+                <p id="avgCard">—</p>
+            </div>
+        </div>
+
+        <!-- Gender Breakdown (collapsible) -->
+        <div style="background:var(--white,white); border-radius:12px; padding:0;
+                    box-shadow:0 2px 10px rgba(0,0,0,0.05);
+                    border-left:5px solid var(--primary-green); margin-bottom:20px; overflow:hidden;">
+            <div onclick="toggleGender()" style="padding:14px 22px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:700; color:var(--dark-green); font-size:0.95rem;">📊 Gender Breakdown</span>
+                <span id="genderToggleIcon" style="color:var(--primary-green); font-size:0.85rem; font-weight:600;">▼ Show</span>
+            </div>
+            <div id="genderBreakdownBody" style="display:none; padding:0 22px 18px;">
+                <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px;">
+                    <span style="font-size:0.88rem; color:#555;">👨 Male: <strong id="attMale">—</strong></span>
+                    <span style="font-size:0.88rem; color:#555;">👩 Female: <strong id="attFemale">—</strong></span>
+                    <span style="font-size:0.88rem; color:#555;">🧒 Children: <strong id="attChild">—</strong></span>
+                    <span style="font-size:0.88rem; color:#999;">👤 Unspecified: <strong id="attUnspec">—</strong></span>
+                </div>
+                <div style="display:flex; border-radius:8px; overflow:hidden; height:16px; background:#eee;">
+                    <div id="attBarMale"   style="background:#1565c0; height:100%; transition:width 0.4s;"></div>
+                    <div id="attBarFemale" style="background:#e91e8c; height:100%; transition:width 0.4s;"></div>
+                    <div id="attBarChild"  style="background:#ff9800; height:100%; transition:width 0.4s;"></div>
+                    <div id="attBarUnspec" style="background:#ccc;    height:100%; transition:width 0.4s;"></div>
+                </div>
             </div>
         </div>
 
         <!-- Tab Navigation -->
-        <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
             <button id="tabMarkBtn" onclick="switchTab('mark')" style="
                 padding:10px 22px; border-radius:8px; border:none; font-weight:bold;
                 font-size:0.9rem; cursor:pointer; transition:0.2s;
@@ -763,6 +874,23 @@
                 background:white; color:var(--primary-green);">
                 🕓 History
             </button>
+            <a href="scanner.html" style="text-decoration:none;">
+                <button style="
+                    padding:10px 22px; border-radius:8px; border:none; font-weight:bold;
+                    font-size:0.9rem; cursor:pointer; transition:0.2s;
+                    background:#7b1fa2; color:white;">
+                    📷 QR Scanner
+                </button>
+            </a>
+            <a href="qrcodes.html" style="text-decoration:none;">
+                <button style="
+                    padding:10px 22px; border-radius:8px; border:none; font-weight:bold;
+                    font-size:0.9rem; cursor:pointer; transition:0.2s;
+                    background:#1565c0; color:white;">
+                    🔲 Member QR Codes
+                </button>
+            </a>
+        </div>
         </div>
 
         <!-- ── MARK ATTENDANCE PANEL ── -->
@@ -772,7 +900,7 @@
         <div class="controls-card">
             <div class="control-group">
                 <label>Service Date:</label>
-                <input type="date" id="serviceDate" value="2026-05-16">
+                <input type="date" id="serviceDate">
             </div>
             <div class="control-group">
                 <label>Service Type:</label>
@@ -783,14 +911,49 @@
                 </select>
             </div>
             <div class="present-counter">
-                Present: <span id="count">0</span> / <span id="total">3</span>
+                Present: <span id="count">0</span> / <span id="total">0</span>
             </div>
         </div>
 
-        <!-- Search + Add Member -->
-        <div class="action-bar">
-            <input type="text" class="search-input" placeholder="Search member by name or group..." oninput="filterTable(this.value)">
-            <button class="add-btn" onclick="openModal()">+ Add Member</button>
+        <!-- Filter + Search + Sync -->
+        <div class="action-bar" style="flex-wrap:wrap; gap:10px;">
+            <input type="text" class="search-input" placeholder="Search by name, group or gender..." oninput="filterTable(this.value)" style="flex:1; min-width:180px;">
+            <select id="filterGroup" onchange="filterTable(document.getElementById('filterSearch')?.value||'')" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:0.9rem;outline:none;">
+                <option value="">All Groups</option>
+                <optgroup label="Men">
+                    <option>Mighty Men of Valor (MMV)</option>
+                </optgroup>
+                <optgroup label="Women">
+                    <option>Precious Vessels of Virtue (PVV)</option>
+                </optgroup>
+                <optgroup label="Youth">
+                    <option>Omega Generation</option>
+                    <option>New Breed</option>
+                </optgroup>
+                <optgroup label="Children">
+                    <option>Children — Love Class (0–5 yrs)</option>
+                    <option>Children — Joy Class (6–8 yrs)</option>
+                    <option>Children — Peace Class (9–11 yrs)</option>
+                </optgroup>
+                <optgroup label="Ministry Teams">
+                    <option>Choir</option>
+                    <option>Ushering</option>
+                    <option>Media</option>
+                    <option>Intercessory Ministry</option>
+                    <option>Welfare Department</option>
+                    <option>Accounts Department</option>
+                </optgroup>
+                <optgroup label="Other">
+                    <option>Visitor</option>
+                </optgroup>
+            </select>
+            <select id="filterGender" onchange="filterTable(document.getElementById('filterSearch')?.value||'')" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:0.9rem;outline:none;">
+                <option value="">All Genders</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="child">Children</option>
+            </select>
+            <button class="add-btn" style="background:#1565c0;" onclick="syncFromMembers()" title="Refresh member list from Member Management">🔄 Sync Members</button>
         </div>
 
         <!-- Attendance Table -->
@@ -799,16 +962,19 @@
                 <thead>
                     <tr>
                         <th>Member Name</th>
-                        <th>Group</th>
+                        <th>Department</th>
+                        <th>Gender</th>
                         <th>Last Attended</th>
                         <th>Present?</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody id="attendanceBody">
                 </tbody>
             </table>
 
-            <div class="submit-bar">
+            <div class="submit-bar" style="display:flex;gap:10px;justify-content:flex-end; margin-top:20px;">
+                <button class="submit-btn" style="background:#1565c0;" onclick="exportAttendanceSheet()">🖨 Print Roll</button>
                 <button class="submit-btn" onclick="submitAttendance()">Submit Attendance Record</button>
             </div>
         </div>
@@ -832,38 +998,129 @@
             </div>
         </div>
 
-    </div><!-- end main-content -->
+        <!-- ── QR CHECK-IN PANEL ── -->
+        <div id="panelQR" style="display:none;">
+            <div style="background:var(--card-bg,white); border-radius:12px; padding:25px;
+                        box-shadow:0 2px 10px rgba(0,0,0,0.05);
+                        border-left:5px solid #1565c0; margin-bottom:20px;">
 
-    <!-- Add Member to Attendance Modal -->
-    <div class="modal-backdrop" id="addModal">
-        <div class="modal">
-            <h2>Add Member to Roll</h2>
-            <div class="form-group">
-                <label>Member Name</label>
-                <input type="text" id="newName" placeholder="e.g. Abena Owusu">
+                <h2 style="color:#1565c0; font-size:1.1rem; margin-bottom:6px;">📷 QR Code Check-In</h2>
+                <p style="color:var(--text-grey,#555); font-size:0.88rem; margin-bottom:20px;">
+                    Display this QR code at the entrance. Members scan it with their phone camera and check themselves in. 
+                    Their attendance updates here in real time.
+                </p>
+
+                <!-- Session selector for QR -->
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; align-items:flex-end;">
+                    <div>
+                        <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--dark-green,#1b5e20); margin-bottom:5px;">Service Date</label>
+                        <input type="date" id="qrDate" style="padding:9px 12px; border:1px solid #ddd; border-radius:8px; font-size:0.9rem; outline:none;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--dark-green,#1b5e20); margin-bottom:5px;">Service Type</label>
+                        <select id="qrService" style="padding:9px 12px; border:1px solid #ddd; border-radius:8px; font-size:0.9rem; outline:none;">
+                            <option>Sunday Service</option>
+                            <option>Tuesday Bible Studies</option>
+                            <option>Friday Prayer Meeting</option>
+                        </select>
+                    </div>
+                    <button onclick="generateQR()" style="
+                        background:#1565c0; color:white; border:none;
+                        padding:10px 22px; border-radius:8px; font-weight:bold;
+                        font-size:0.9rem; cursor:pointer;">
+                        Generate QR Code
+                    </button>
+                </div>
+
+                <!-- QR Code Display -->
+                <div id="qrDisplay" style="display:none;">
+                    <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;">
+
+                        <!-- QR Code box -->
+                        <div style="text-align:center;">
+                            <div id="qrcode" style="
+                                background:white; padding:16px; border-radius:12px;
+                                display:inline-block; box-shadow:0 4px 16px rgba(0,0,0,0.12);
+                                border:2px solid #1565c0;">
+                            </div>
+                            <div style="margin-top:10px; font-size:0.8rem; color:#666;">
+                                Scan with phone camera
+                            </div>
+                            <button onclick="printQR()" style="
+                                margin-top:10px; background:#1565c0; color:white;
+                                border:none; padding:8px 18px; border-radius:6px;
+                                font-weight:bold; font-size:0.82rem; cursor:pointer;">
+                                🖨 Print QR Code
+                            </button>
+                        </div>
+
+                        <!-- Live check-in feed -->
+                        <div style="flex:1; min-width:240px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                <h3 style="color:#1565c0; font-size:0.95rem; font-weight:700;">
+                                    ⚡ Live Check-Ins
+                                </h3>
+                                <span style="background:#e3f2fd; color:#1565c0; padding:4px 12px;
+                                             border-radius:20px; font-size:0.82rem; font-weight:bold;"
+                                      id="qrCheckinCount">0 checked in</span>
+                            </div>
+                            <div id="qrFeed" style="
+                                max-height:280px; overflow-y:auto;
+                                border:1px solid #e3f2fd; border-radius:8px; padding:10px;
+                                background:#f8fbff;">
+                                <div id="qrFeedEmpty" style="text-align:center; padding:20px; color:#999; font-size:0.85rem;">
+                                    Waiting for members to scan...
+                                </div>
+                            </div>
+                            <div style="margin-top:10px; font-size:0.78rem; color:#999;">
+                                🔄 Updates every 3 seconds automatically
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session summary -->
+                    <div id="qrSummary" style="
+                        margin-top:20px; padding:14px 18px; background:#e3f2fd;
+                        border-radius:8px; font-size:0.88rem; color:#1565c0; font-weight:600;">
+                    </div>
+
+                    <!-- Sync to main list button -->
+                    <div style="margin-top:16px;">
+                        <button onclick="syncQRToAttendance()" style="
+                            background:var(--primary-green,#2e7d32); color:white; border:none;
+                            padding:11px 24px; border-radius:8px; font-weight:bold;
+                            font-size:0.9rem; cursor:pointer; margin-right:10px;">
+                            ✅ Apply QR Check-Ins to Attendance
+                        </button>
+                        <button onclick="clearQRSession()" style="
+                            background:#ffebee; color:#c62828; border:1px solid #ffcdd2;
+                            padding:11px 18px; border-radius:8px; font-weight:bold;
+                            font-size:0.82rem; cursor:pointer;">
+                            🗑 Clear QR Session
+                        </button>
+                    </div>
+                </div>
+
             </div>
-            <div class="form-group">
-                <label>Group / Department</label>
-                <select id="newGroup">
-                    <option>Choir</option>
-                    <option>Youth Ministry</option>
-                    <option>Ushering</option>
-                    <option>Media</option>
-                    <option>Men's Fellowship</option>
-                    <option>Women's Fellowship</option>
-                    <option>Visitor</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Last Attended</label>
-                <input type="text" id="newLastAttended" placeholder="e.g. 10 May 2026 or First Time">
-            </div>
-            <div class="modal-actions">
-                <button class="save-btn" onclick="addMember()">Add to Roll</button>
-                <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+
+            <!-- How it works note -->
+            <div style="background:var(--card-bg,white); border-radius:12px; padding:18px 22px;
+                        box-shadow:0 2px 10px rgba(0,0,0,0.05); border-left:5px solid #ff9800;">
+                <h3 style="color:#e65100; font-size:0.9rem; margin-bottom:10px;">ℹ️ How QR Check-In Works</h3>
+                <ol style="font-size:0.85rem; color:var(--text-grey,#555); line-height:1.8; padding-left:18px;">
+                    <li>Select the service date and type, then click <strong>Generate QR Code</strong></li>
+                    <li>Display the QR code on a screen or print it at the church entrance</li>
+                    <li>Members scan the QR with their phone camera — it opens a simple check-in page</li>
+                    <li>They pick their name and tap <strong>Check In</strong></li>
+                    <li>Their name appears in the Live Check-Ins feed in real time</li>
+                    <li>Click <strong>Apply QR Check-Ins to Attendance</strong> to mark them as Present in the attendance list</li>
+                    <li>You can still manually toggle anyone who didn't scan</li>
+                </ol>
             </div>
         </div>
-    </div>
+
+    </div><!-- end main-content -->
+
 
     <!-- Toast Notification -->
     <div class="toast" id="toast"></div>
@@ -875,275 +1132,395 @@
             document.getElementById('overlay').classList.toggle('active');
         }
 
-        // ── localStorage keys ─────────────────────────────────
-        const ROLL_KEY    = 'icgc_attendance_roll';     // member roll list
-        const SESSION_KEY = 'icgc_attendance_sessions'; // submitted sessions
-
-        const SEED_ROLL = [
-            { id: 1, name: 'Kofi Mensah', group: 'Choir',          lastAttended: '05 May 2026' },
-            { id: 2, name: 'Ama Serwaa',  group: 'Youth Ministry', lastAttended: '05 May 2026' },
-            { id: 3, name: 'John Doe',    group: 'Visitor',        lastAttended: 'First Time'  }
-        ];
-
-        function loadRoll() {
-            const raw = localStorage.getItem(ROLL_KEY);
-            if (raw) return JSON.parse(raw);
-            localStorage.setItem(ROLL_KEY, JSON.stringify(SEED_ROLL));
-            return SEED_ROLL;
+        // ── Toggle Gender Breakdown ───────────────────────────
+        function toggleGender() {
+            const body = document.getElementById('genderBreakdownBody');
+            const icon = document.getElementById('genderToggleIcon');
+            const isHidden = body.style.display === 'none';
+            body.style.display  = isHidden ? 'block' : 'none';
+            icon.textContent    = isHidden ? '▲ Hide' : '▼ Show';
         }
 
-        function getRoll()       { return JSON.parse(localStorage.getItem(ROLL_KEY) || '[]'); }
-        function saveRoll(list)  { localStorage.setItem(ROLL_KEY, JSON.stringify(list)); }
-        function getSessions()   { return JSON.parse(localStorage.getItem(SESSION_KEY) || '[]'); }
+        // ── Member List Modal (Total Members click) ───────────
+        function openMemberListModal() {
+            const members = getMembers();
+            const modal   = document.createElement('div');
+            modal.id      = 'memberListModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;padding:16px;';
 
-        function nextRollId() {
-            const list = getRoll();
-            return list.length ? Math.max(...list.map(m => m.id)) + 1 : 1;
+            const gIcon = { male:'👨', female:'👩', child:'🧒' };
+            const rows  = members.length
+                ? members.map((m,i) => `
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:10px 12px;font-size:0.82rem;color:#aaa;">${i+1}</td>
+                        <td style="padding:10px 12px;font-weight:600;font-size:0.9rem;">${m.name}</td>
+                        <td style="padding:10px 12px;font-size:0.82rem;color:#555;">${m.dept||'—'}</td>
+                        <td style="padding:10px 12px;font-size:0.82rem;">${gIcon[m.gender]||'👤'} ${m.gender||'—'}</td>
+                        <td style="padding:10px 12px;">
+                            <span style="background:${m.status==='active'?'#c8e6c9':'#fff9c4'};color:${m.status==='active'?'#2e7d32':'#f9a825'};
+                                padding:3px 8px;border-radius:12px;font-size:0.75rem;font-weight:700;">
+                                ${m.status==='active'?'Active':'Visitor'}
+                            </span>
+                        </td>
+                    </tr>`)
+                    .join('')
+                : '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">No members yet.</td></tr>';
+
+            modal.innerHTML = `
+                <div style="background:var(--white,white);border-radius:14px;width:600px;max-width:100%;
+                            max-height:85vh;overflow:hidden;display:flex;flex-direction:column;
+                            box-shadow:0 16px 48px rgba(0,0,0,0.25);">
+                    <div style="padding:18px 22px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <h2 style="color:var(--dark-green,#1b5e20);font-size:1.1rem;">👥 Member Directory</h2>
+                            <p style="font-size:0.8rem;color:#888;margin-top:2px;">${members.length} member${members.length!==1?'s':''} registered</p>
+                        </div>
+                        <button onclick="document.getElementById('memberListModal').remove()"
+                            style="background:#eee;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;">✕ Close</button>
+                    </div>
+                    <div style="padding:12px 22px;border-bottom:1px solid #eee;">
+                        <input type="text" placeholder="Search members..." oninput="filterMemberModal(this.value)"
+                            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9rem;outline:none;background:#fff;color:#222;">
+                    </div>
+                    <div style="overflow-y:auto;flex:1;">
+                        <table style="width:100%;border-collapse:collapse;" id="memberModalTable">
+                            <thead style="position:sticky;top:0;background:var(--white,#f9f9f9);">
+                                <tr>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">#</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Name</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Department</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Gender</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="memberModalBody">${rows}</tbody>
+                        </table>
+                    </div>
+                    <div style="padding:14px 22px;border-top:1px solid #eee;text-align:center;">
+                        <a href="member management.html" style="color:var(--primary-green,#2e7d32);font-weight:700;font-size:0.88rem;text-decoration:none;">
+                            ✏️ Manage Members →
+                        </a>
+                    </div>
+                </div>`;
+
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
         }
 
-        // ── Render roll table ─────────────────────────────────
-        function renderRoll() {
-            const list  = getRoll();
-            const tbody = document.getElementById('attendanceBody');
+        function filterMemberModal(q) {
+            const rows = document.querySelectorAll('#memberModalBody tr');
+            rows.forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+            });
+        }
+
+        // ── Storage Keys ──────────────────────────────────────
+        const MEMBERS_KEY  = 'icgc_members';
+        const SESSION_KEY  = 'icgc_attendance_sessions';
+        const HIST_KEY     = 'icgc_attendance_lastSeen'; // { memberId: 'DD Mon YYYY' }
+
+        function getMembers()  { return JSON.parse(localStorage.getItem(MEMBERS_KEY)  || '[]'); }
+        function getSessions() { return JSON.parse(localStorage.getItem(SESSION_KEY)  || '[]'); }
+        function getHistory()  { return JSON.parse(localStorage.getItem(HIST_KEY)     || '{}'); }
+        function saveHistory(h){ localStorage.setItem(HIST_KEY, JSON.stringify(h)); }
+
+        // ── Gender label helpers ──────────────────────────────
+        const genderLabel = { male:'👨 Male', female:'👩 Female', child:'🧒 Child', '':'—' };
+        const genderColor = { male:'#1565c0', female:'#c2185b', child:'#e65100' };
+
+        // ── Render attendance table from icgc_members ─────────
+        function renderRoll(filterText, filterGroup, filterGender) {
+            const members = getMembers();
+            const history = getHistory();
+            const tbody   = document.getElementById('attendanceBody');
             tbody.innerHTML = '';
 
-            if (!list.length) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:40px; color:#999;">
-                    <div style="font-size:2rem; margin-bottom:10px;">📋</div>
-                    <div style="font-weight:600;">No members on the roll yet.</div>
-                    <div style="font-size:0.85rem; margin-top:5px;">Click <strong>+ Add Member</strong> to add someone to the roll.</div>
-                </td></tr>`;
+            const ft = (filterText  || '').toLowerCase();
+            const fg = (filterGroup  || '');
+            const gg = (filterGender || '');
+
+            // Filter
+            const filtered = members.filter(m => {
+                const matchText   = !ft || m.name.toLowerCase().includes(ft) || (m.dept||'').toLowerCase().includes(ft) || (m.gender||'').toLowerCase().includes(ft);
+                const matchGroup  = !fg || m.dept === fg;
+                const matchGender = !gg || m.gender === gg;
+                return matchText && matchGroup && matchGender;
+            });
+
+            if (!filtered.length) {
+                const msg = members.length === 0
+                    ? '👥 No members yet. <a href="member management.html" style="color:var(--primary-green,#2e7d32);font-weight:bold;">Go to Member Management</a> to add members.'
+                    : '🔍 No members match your filter.';
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">${msg}</td></tr>`;
                 updateCount();
                 return;
             }
 
-            list.forEach(member => {
+            filtered.forEach(member => {
+                const lastSeen = history[member.id] || 'Never';
+                const streak   = getStreak(member.id);
+                const streakBadge = streak > 0
+                    ? `<span style="background:#e8f5e9;color:#2e7d32;padding:2px 7px;border-radius:10px;font-size:0.72rem;font-weight:bold;margin-left:5px;" title="${streak} consecutive service(s)">🔥 ${streak}</span>`
+                    : '';
+                const gl  = genderLabel[member.gender || ''] || '—';
+                const gc  = genderColor[member.gender]       || '#777';
+
                 const row = document.createElement('tr');
-                row.dataset.id = member.id;
+                row.dataset.id     = member.id;
+                row.dataset.name   = member.name;
+                row.dataset.dept   = member.dept   || '';
+                row.dataset.gender = member.gender || '';
+                row.style.background = '#fff8f8'; // default absent tint
+
                 row.innerHTML = `
-                    <td>${member.name}</td>
-                    <td>${member.group}</td>
-                    <td>${member.lastAttended}</td>
+                    <td><span style="font-weight:600;">${member.name}</span>${streakBadge}</td>
+                    <td style="font-size:0.88rem;">${member.dept || '—'}</td>
+                    <td style="font-size:0.82rem;color:${gc};font-weight:600;">${gl}</td>
+                    <td style="font-size:0.82rem;color:#888;">${lastSeen}</td>
                     <td>
                         <label class="switch">
-                            <input type="checkbox" onchange="updateCount()">
+                            <input type="checkbox" onchange="updateRowStatus(this)">
                             <span class="slider"></span>
                         </label>
+                    </td>
+                    <td>
+                        <span class="badge badge-absent" id="badge-${member.id}">❌ Absent</span>
                     </td>`;
                 tbody.appendChild(row);
             });
 
             updateCount();
+            updateGenderBreakdown();
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            setAutoDate(); loadRoll(); renderRoll(); });
+        // ── Sync from member management (re-render) ───────────
+        function syncFromMembers() {
+            renderRoll(
+                document.querySelector('.search-input')?.value || '',
+                document.getElementById('filterGroup')?.value  || '',
+                document.getElementById('filterGender')?.value || ''
+            );
+            const total = getMembers().length;
+            showToast(`🔄 Synced — ${total} member${total !== 1 ? 's' : ''} loaded from Member Directory.`);
+        }
 
-        // ── Live counter ─────────────────────────────────────
+        // ── Toggle present/absent ─────────────────────────────
+        function updateRowStatus(checkbox) {
+            const row   = checkbox.closest('tr');
+            const id    = row.dataset.id;
+            const badge = document.getElementById(`badge-${id}`);
+            if (checkbox.checked) {
+                badge.textContent    = '✅ Present';
+                badge.className      = 'badge badge-present';
+                row.style.background = '#f9fff9';
+            } else {
+                badge.textContent    = '❌ Absent';
+                badge.className      = 'badge badge-absent';
+                row.style.background = '#fff8f8';
+            }
+            updateCount();
+        }
+
+        // ── Live counters ─────────────────────────────────────
         function updateCount() {
-            const checkboxes   = document.querySelectorAll('#attendanceBody input[type="checkbox"]');
-            const presentCount = [...checkboxes].filter(c => c.checked).length;
-            const totalCount   = checkboxes.length;
+            const rows      = document.querySelectorAll('#attendanceBody tr[data-id]');
+            const checkboxes = document.querySelectorAll('#attendanceBody input[type="checkbox"]');
+            const present   = [...checkboxes].filter(c => c.checked).length;
+            const total     = getMembers().length;
+            const shown     = rows.length;
 
-            document.getElementById('count').textContent       = presentCount;
-            document.getElementById('total').textContent       = totalCount;
-            document.getElementById('presentCard').textContent = presentCount;
-            document.getElementById('absentCard').textContent  = totalCount - presentCount;
+            document.getElementById('count').textContent            = present;
+            document.getElementById('total').textContent            = shown;
+            document.getElementById('presentCard').textContent      = present;
+            document.getElementById('absentCard').textContent       = shown - present;
+            document.getElementById('totalMembersCard').textContent = total;
+
+            const sessions = getSessions();
+            if (sessions.length) {
+                const avg = Math.round(sessions.reduce((s, x) => s + x.attendance.filter(a => a.present).length, 0) / sessions.length);
+                document.getElementById('avgCard').textContent = avg;
+            } else {
+                document.getElementById('avgCard').textContent = '—';
+            }
+
+            updateGenderBreakdown();
         }
 
-        // ── Submit attendance ─────────────────────────────────
+        // ── Gender Breakdown ──────────────────────────────────
+        function updateGenderBreakdown() {
+            const rows    = document.querySelectorAll('#attendanceBody tr[data-id]');
+            const total   = rows.length;
+            let male = 0, female = 0, child = 0, unspec = 0;
+            rows.forEach(r => {
+                const g = r.dataset.gender || 'unspec';
+                if (g === 'male')       male++;
+                else if (g === 'female') female++;
+                else if (g === 'child')  child++;
+                else                     unspec++;
+            });
+            document.getElementById('attMale').textContent   = male;
+            document.getElementById('attFemale').textContent = female;
+            document.getElementById('attChild').textContent  = child;
+            document.getElementById('attUnspec').textContent = unspec;
+            const pct = n => total ? ((n/total)*100).toFixed(1)+'%' : '0%';
+            document.getElementById('attBarMale').style.width   = pct(male);
+            document.getElementById('attBarFemale').style.width = pct(female);
+            document.getElementById('attBarChild').style.width  = pct(child);
+            document.getElementById('attBarUnspec').style.width = pct(unspec);
+        }
+
+        // ── Submit Attendance ─────────────────────────────────
         function submitAttendance() {
             const date    = document.getElementById('serviceDate').value;
             const service = document.getElementById('serviceType').value;
+            if (!date) { showToast('⚠️ Please select a service date.', true); return; }
 
-            if (!date) {
-                showToast('⚠️ Please select a service date.', true);
-                return;
-            }
-
-            // Collect present/absent per member
-            const rows       = document.querySelectorAll('#attendanceBody tr');
-            const roll       = getRoll();
+            const rows      = document.querySelectorAll('#attendanceBody tr[data-id]');
+            const history   = getHistory();
             const attendance = [];
 
-            rows.forEach(row => {
-                const id      = parseInt(row.dataset.id);
-                const present = row.querySelector('input[type="checkbox"]').checked;
-                const member  = roll.find(m => m.id === id);
-                if (member) {
-                    attendance.push({ id, name: member.name, group: member.group, present });
+            const d = new Date(date);
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 
-                    // Update lastAttended for present members
-                    if (present) {
-                        const d = new Date(date);
-                        const months = ['Jan','Feb','Mar','Apr','May','Jun',
-                                        'Jul','Aug','Sep','Oct','Nov','Dec'];
-                        member.lastAttended = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-                    }
-                }
+            rows.forEach(row => {
+                const id      = row.dataset.id;
+                const name    = row.dataset.name;
+                const dept    = row.dataset.dept;
+                const gender  = row.dataset.gender;
+                const present = row.querySelector('input[type="checkbox"]').checked;
+                attendance.push({ id, name, dept, gender, present });
+                if (present) history[id] = dateStr;
             });
 
-            // Save updated lastAttended dates
-            saveRoll(roll);
+            saveHistory(history);
 
-            // Save session record
             const sessions = getSessions();
             sessions.push({ date, service, attendance, submittedAt: new Date().toISOString() });
             localStorage.setItem(SESSION_KEY, JSON.stringify(sessions));
+
+            logActivity(`✅ Attendance submitted: ${attendance.filter(a=>a.present).length}/${attendance.length} present — ${service}`, 'attendance');
 
             const present = document.getElementById('count').textContent;
             const total   = document.getElementById('total').textContent;
             showToast(`✅ ${service} — ${present} of ${total} members marked present.`);
 
-            // Re-render to show updated last-attended dates
-            renderRoll();
+            // Re-render to reflect updated lastSeen dates
+            renderRoll(
+                document.querySelector('.search-input')?.value || '',
+                document.getElementById('filterGroup')?.value  || '',
+                document.getElementById('filterGender')?.value || ''
+            );
         }
 
-        // ── Modal: Add member to roll ─────────────────────────
-        function openModal() {
-            document.getElementById('newName').value         = '';
-            document.getElementById('newGroup').value        = 'Choir';
-            document.getElementById('newLastAttended').value = '';
-            document.getElementById('addModal').classList.add('active');
+        // ── Filter ────────────────────────────────────────────
+        function filterTable(text) {
+            const group  = document.getElementById('filterGroup')?.value  || '';
+            const gender = document.getElementById('filterGender')?.value || '';
+            renderRoll(text, group, gender);
         }
 
-        function closeModal() {
-            document.getElementById('addModal').classList.remove('active');
-        }
-
-        function addMember() {
-            const name         = document.getElementById('newName').value.trim();
-            const group        = document.getElementById('newGroup').value;
-            const lastAttended = document.getElementById('newLastAttended').value.trim() || 'First Time';
-
-            if (!name) {
-                showToast('⚠️ Please enter the member name.', true);
-                return;
+        // ── Attendance Streak ─────────────────────────────────
+        function getStreak(memberId) {
+            const sessions = getSessions().slice().reverse();
+            let streak = 0;
+            for (const s of sessions) {
+                const r = s.attendance.find(a => a.id === memberId);
+                if (r && r.present) streak++;
+                else break;
             }
-
-            const roll = getRoll();
-            roll.push({ id: nextRollId(), name, group, lastAttended });
-            saveRoll(roll);
-            renderRoll();
-            closeModal();
-            showToast(`✅ ${name} added to the roll.`);
+            return streak;
         }
 
-        // ── Search filter ─────────────────────────────────────
-        function filterTable(query) {
-            document.querySelectorAll('#attendanceBody tr').forEach(row => {
-                row.style.display =
-                    row.innerText.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
-            });
-        }
+        // ── Print Roll Sheet ──────────────────────────────────
+        function exportAttendanceSheet() {
+            const members = getMembers();
+            const history = getHistory();
+            const date    = document.getElementById('serviceDate').value;
+            const service = document.getElementById('serviceType').value;
 
-        // ── Tab Switching ─────────────────────────────────────
-        function switchTab(tab) {
-            const markPanel    = document.getElementById('panelMark');
-            const historyPanel = document.getElementById('panelHistory');
-            const markBtn      = document.getElementById('tabMarkBtn');
-            const historyBtn   = document.getElementById('tabHistoryBtn');
+            const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const d    = date ? new Date(date) : new Date();
+            const dStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 
-            if (tab === 'mark') {
-                markPanel.style.display    = '';
-                historyPanel.style.display = 'none';
-                markBtn.style.background   = 'var(--primary-green)';
-                markBtn.style.color        = 'white';
-                markBtn.style.border       = 'none';
-                historyBtn.style.background = 'white';
-                historyBtn.style.color     = 'var(--primary-green)';
-                historyBtn.style.border    = '2px solid var(--primary-green)';
-            } else {
-                markPanel.style.display    = 'none';
-                historyPanel.style.display = '';
-                historyBtn.style.background = 'var(--primary-green)';
-                historyBtn.style.color     = 'white';
-                historyBtn.style.border    = 'none';
-                markBtn.style.background   = 'white';
-                markBtn.style.color        = 'var(--primary-green)';
-                markBtn.style.border       = '2px solid var(--primary-green)';
-                renderHistory();
-            }
+            const gLabel = { male:'Male', female:'Female', child:'Child' };
+            const rows = members.map((m, i) => `
+                <tr>
+                    <td style="padding:9px;border-bottom:1px solid #eee;">${i+1}</td>
+                    <td style="padding:9px;border-bottom:1px solid #eee;font-weight:600;">${m.name}</td>
+                    <td style="padding:9px;border-bottom:1px solid #eee;">${m.dept || '—'}</td>
+                    <td style="padding:9px;border-bottom:1px solid #eee;">${gLabel[m.gender] || '—'}</td>
+                    <td style="padding:9px;border-bottom:1px solid #eee;color:#888;font-size:0.85rem;">${history[m.id] || 'Never'}</td>
+                    <td style="padding:9px;border-bottom:1px solid #eee;text-align:center;">
+                        <span style="display:inline-block;width:22px;height:22px;border:2px solid #2e7d32;border-radius:3px;"></span>
+                    </td>
+                </tr>`).join('');
+
+            const win = window.open('', '_blank');
+            win.document.write(`<!DOCTYPE html><html><head>
+                <title>Attendance Roll — ${dStr}</title>
+                <style>
+                    body{font-family:'Segoe UI',sans-serif;padding:28px;color:#333;}
+                    h2{color:#1b5e20;margin-bottom:4px;}
+                    p{color:#666;font-size:0.88rem;margin-bottom:18px;}
+                    table{width:100%;border-collapse:collapse;}
+                    th{background:#e8f5e9;color:#1b5e20;padding:9px;text-align:left;border-bottom:2px solid #2e7d32;font-size:0.88rem;}
+                    @media print{button{display:none;}}
+                </style></head><body>
+                <h2>ICGC Church Management — Attendance Roll</h2>
+                <p>${service} &nbsp;|&nbsp; ${dStr} &nbsp;|&nbsp; Total Members: ${members.length}</p>
+                <button onclick="window.print()" style="margin-bottom:14px;padding:8px 20px;background:#2e7d32;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">🖨 Print</button>
+                <table>
+                    <thead><tr><th>#</th><th>Name</th><th>Department</th><th>Gender</th><th>Last Attended</th><th style="text-align:center;">Present ✓</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div style="margin-top:28px;padding-top:14px;border-top:1px solid #ccc;font-size:0.78rem;color:#aaa;text-align:center;">
+                    Generated ${new Date().toLocaleString()} · ICGC Management System
+                </div></body></html>`);
+            win.document.close();
         }
 
         // ── Render History ────────────────────────────────────
         function renderHistory() {
-            const sessions = getSessions();
+            const sessions  = getSessions();
             const container = document.getElementById('historyContent');
-
             if (!sessions.length) {
-                container.innerHTML = `
-                    <div style="text-align:center; padding:40px; color:#999;">
-                        <div style="font-size:2.5rem; margin-bottom:12px;">📋</div>
-                        <p style="font-weight:600;">No sessions recorded yet.</p>
-                        <p style="font-size:0.85rem; margin-top:6px;">Submit attendance to start building your history.</p>
-                    </div>`;
-                return;
+                container.innerHTML = `<div style="text-align:center;padding:40px;color:#999;">
+                    <div style="font-size:2rem;margin-bottom:10px;">📋</div>
+                    <p style="font-weight:600;">No sessions recorded yet.</p>
+                    <p style="font-size:0.85rem;margin-top:6px;">Submit attendance to start building history.</p>
+                </div>`; return;
             }
-
-            // Show newest first
             const sorted = [...sessions].reverse();
-            container.innerHTML = sorted.map((s, i) => {
+            container.innerHTML = sorted.map(s => {
                 const presentList = s.attendance.filter(a => a.present);
                 const absentList  = s.attendance.filter(a => !a.present);
-                const total       = s.attendance.length;
-                const pct         = total ? Math.round((presentList.length / total) * 100) : 0;
-
-                return `
-                <div style="border:1px solid #eee; border-radius:10px; padding:18px;
-                            margin-bottom:15px; background:#fafafa;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                const total = s.attendance.length;
+                const pct   = total ? Math.round((presentList.length/total)*100) : 0;
+                const gCount = { male:0, female:0, child:0, unspec:0 };
+                s.attendance.forEach(a => { const g = a.gender||'unspec'; if(gCount[g]!==undefined) gCount[g]++; else gCount.unspec++; });
+                return `<div style="border:1px solid #eee;border-radius:10px;padding:18px;margin-bottom:14px;background:#fafafa;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                         <div>
-                            <div style="font-weight:700; color:var(--dark-green); font-size:1rem;">
-                                📅 ${s.date} — ${s.service}
-                            </div>
-                            <div style="font-size:0.8rem; color:#888; margin-top:3px;">
-                                Submitted: ${new Date(s.submittedAt).toLocaleString()}
-                            </div>
+                            <div style="font-weight:700;color:var(--dark-green,#1b5e20);">📅 ${s.date} — ${s.service}</div>
+                            <div style="font-size:0.78rem;color:#888;margin-top:3px;">Submitted: ${new Date(s.submittedAt).toLocaleString()}</div>
                         </div>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                            <span style="background:#c8e6c9; color:#2e7d32; padding:5px 12px;
-                                         border-radius:20px; font-weight:bold; font-size:0.85rem;">
-                                ✅ ${presentList.length} Present
-                            </span>
-                            <span style="background:#ffcdd2; color:#c62828; padding:5px 12px;
-                                         border-radius:20px; font-weight:bold; font-size:0.85rem;">
-                                ❌ ${absentList.length} Absent
-                            </span>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <span style="background:#c8e6c9;color:#2e7d32;padding:4px 10px;border-radius:20px;font-weight:bold;font-size:0.82rem;">✅ ${presentList.length} Present</span>
+                            <span style="background:#ffcdd2;color:#c62828;padding:4px 10px;border-radius:20px;font-weight:bold;font-size:0.82rem;">❌ ${absentList.length} Absent</span>
                         </div>
                     </div>
-
-                    <!-- Progress bar -->
-                    <div style="margin-top:12px; background:#e0e0e0; border-radius:10px; height:8px;">
-                        <div style="width:${pct}%; background:var(--primary-green);
-                                    border-radius:10px; height:8px; transition:width 0.4s;">
-                        </div>
+                    <div style="margin-top:12px;background:#e0e0e0;border-radius:10px;height:8px;">
+                        <div style="width:${pct}%;background:var(--primary-green,#2e7d32);border-radius:10px;height:8px;"></div>
                     </div>
-                    <div style="font-size:0.78rem; color:#666; margin-top:4px;">${pct}% attendance rate</div>
-
-                    <!-- Present members -->
-                    ${presentList.length ? `
-                    <div style="margin-top:12px;">
-                        <div style="font-size:0.82rem; font-weight:600; color:#2e7d32; margin-bottom:6px;">Present:</div>
-                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                            ${presentList.map(m => `
-                                <span style="background:#e8f5e9; color:#2e7d32; padding:3px 10px;
-                                             border-radius:12px; font-size:0.8rem;">${m.name}</span>
-                            `).join('')}
-                        </div>
-                    </div>` : ''}
-
-                    <!-- Absent members -->
-                    ${absentList.length ? `
-                    <div style="margin-top:8px;">
-                        <div style="font-size:0.82rem; font-weight:600; color:#c62828; margin-bottom:6px;">Absent:</div>
-                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                            ${absentList.map(m => `
-                                <span style="background:#ffebee; color:#c62828; padding:3px 10px;
-                                             border-radius:12px; font-size:0.8rem;">${m.name}</span>
-                            `).join('')}
-                        </div>
-                    </div>` : ''}
+                    <div style="font-size:0.76rem;color:#666;margin-top:4px;">${pct}% attendance rate</div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+                        ${gCount.male   ? `<span style="background:#e3f2fd;color:#1565c0;padding:3px 10px;border-radius:12px;font-size:0.76rem;font-weight:600;">👨 ${gCount.male} Male</span>` : ''}
+                        ${gCount.female ? `<span style="background:#fce4ec;color:#e91e8c;padding:3px 10px;border-radius:12px;font-size:0.76rem;font-weight:600;">👩 ${gCount.female} Female</span>` : ''}
+                        ${gCount.child  ? `<span style="background:#fff3e0;color:#ff9800;padding:3px 10px;border-radius:12px;font-size:0.76rem;font-weight:600;">🧒 ${gCount.child} Children</span>` : ''}
+                    </div>
+                    ${presentList.length ? `<div style="margin-top:12px;"><div style="font-size:0.8rem;font-weight:600;color:#2e7d32;margin-bottom:6px;">Present:</div><div style="display:flex;flex-wrap:wrap;gap:6px;">${presentList.map(m=>`<span style="background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:12px;font-size:0.78rem;">${m.name}</span>`).join('')}</div></div>` : ''}
+                    ${absentList.length  ? `<div style="margin-top:8px;"><div style="font-size:0.8rem;font-weight:600;color:#c62828;margin-bottom:6px;">Absent:</div><div style="display:flex;flex-wrap:wrap;gap:6px;">${absentList.map(m=>`<span style="background:#ffebee;color:#c62828;padding:3px 10px;border-radius:12px;font-size:0.78rem;">${m.name}</span>`).join('')}</div></div>` : ''}
                 </div>`;
             }).join('');
         }
@@ -1152,20 +1529,348 @@
         function clearHistory() {
             if (!confirm('Clear all attendance history? This cannot be undone.')) return;
             localStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(HIST_KEY);
             renderHistory();
             showToast('🗑️ Attendance history cleared.');
         }
+
+        // ── Tab Switching ─────────────────────────────────────
+        function switchTab(tab) {
+            const panels  = { mark: 'panelMark', history: 'panelHistory', qr: 'panelQR' };
+            const buttons = { mark: 'tabMarkBtn', history: 'tabHistoryBtn', qr: 'tabQRBtn' };
+            const colors  = { mark: 'var(--primary-green,#2e7d32)', history: 'var(--primary-green,#2e7d32)', qr: '#1565c0' };
+
+            // Hide all panels, reset all buttons
+            Object.keys(panels).forEach(t => {
+                const p = document.getElementById(panels[t]);
+                const b = document.getElementById(buttons[t]);
+                if (p) p.style.display = 'none';
+                if (b) {
+                    b.style.background = 'white';
+                    b.style.color      = colors[t];
+                    b.style.border     = `2px solid ${colors[t]}`;
+                }
+            });
+
+            // Show selected panel, activate button
+            const activePanel = document.getElementById(panels[tab]);
+            const activeBtn   = document.getElementById(buttons[tab]);
+            if (activePanel) activePanel.style.display = '';
+            if (activeBtn) {
+                activeBtn.style.background = colors[tab];
+                activeBtn.style.color      = 'white';
+                activeBtn.style.border     = 'none';
+            }
+
+            if (tab === 'history') renderHistory();
+            if (tab === 'qr') initQRTab();
+        }
+
+        // ── QR Code Storage Keys ──────────────────────────────
+        const QR_SESSION_KEY = 'icgc_qr_checkins'; // { date, service, checkins: [memberId,...] }
+
+        // ── Init QR Tab ───────────────────────────────────────
+        function initQRTab() {
+            // Set default date to today
+            const qrDate = document.getElementById('qrDate');
+            if (!qrDate.value) qrDate.value = new Date().toISOString().slice(0, 10);
+
+            // If a QR session is already active, restore it
+            const existing = getQRSession();
+            if (existing && existing.date) {
+                qrDate.value = existing.date;
+                document.getElementById('qrService').value = existing.service || 'Sunday Service';
+                showQRDisplay(existing.date, existing.service);
+            }
+        }
+
+        function getQRSession() {
+            return JSON.parse(localStorage.getItem(QR_SESSION_KEY) || 'null');
+        }
+
+        // ── Generate QR Code ──────────────────────────────────
+        let qrInstance   = null;
+        let qrPollTimer  = null;
+
+        function generateQR() {
+            const date    = document.getElementById('qrDate').value;
+            const service = document.getElementById('qrService').value;
+
+            if (!date) { showToast('⚠️ Please select a service date.', true); return; }
+
+            // Save session skeleton
+            const existing = getQRSession() || {};
+            const session  = { date, service, checkins: existing.checkins || [] };
+            localStorage.setItem(QR_SESSION_KEY, JSON.stringify(session));
+
+            showQRDisplay(date, service);
+            showToast('✅ QR Code generated! Display it at the entrance.');
+        }
+
+        function showQRDisplay(date, service) {
+            // Build the check-in URL
+            // Works on GitHub Pages or local — uses same origin
+            const base    = window.location.href.replace('attendance.html', '');
+            const params  = new URLSearchParams({ date, service });
+            const url     = `${base}checkin.html?${params.toString()}`;
+
+            // Render QR code
+            const qrBox = document.getElementById('qrcode');
+            qrBox.innerHTML = '';
+            qrInstance = new QRCode(qrBox, {
+                text:          url,
+                width:         200,
+                height:        200,
+                colorDark:     '#1565c0',
+                colorLight:    '#ffffff',
+                correctLevel:  QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('qrDisplay').style.display = '';
+            updateQRSummary();
+
+            // Start polling for new check-ins
+            if (qrPollTimer) clearInterval(qrPollTimer);
+            qrPollTimer = setInterval(pollQRCheckins, 3000);
+        }
+
+        // ── Poll for new check-ins ────────────────────────────
+        let lastCheckinCount = 0;
+
+        function pollQRCheckins() {
+            const session = getQRSession();
+            if (!session) return;
+            const checkins = session.checkins || [];
+
+            // Only update if something changed
+            if (checkins.length === lastCheckinCount) return;
+            lastCheckinCount = checkins.length;
+
+            updateQRFeed(checkins);
+            updateQRSummary();
+
+            // Flash the count badge
+            const badge = document.getElementById('qrCheckinCount');
+            badge.style.background = '#bbdefb';
+            setTimeout(() => badge.style.background = '#e3f2fd', 600);
+        }
+
+        function updateQRFeed(checkins) {
+            const members = getMembers();
+            const feed    = document.getElementById('qrFeed');
+            const empty   = document.getElementById('qrFeedEmpty');
+            const countEl = document.getElementById('qrCheckinCount');
+
+            countEl.textContent = `${checkins.length} checked in`;
+
+            if (!checkins.length) {
+                empty.style.display = '';
+                return;
+            }
+            empty.style.display = 'none';
+
+            feed.innerHTML = [...checkins].reverse().map(entry => {
+                const m    = members.find(x => x.id === entry.memberId);
+                const name = m ? m.name : entry.name || 'Unknown';
+                const dept = m ? (m.dept || '') : '';
+                const time = new Date(entry.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return `<div style="display:flex; justify-content:space-between; align-items:center;
+                                    padding:8px 6px; border-bottom:1px solid #e3f2fd;">
+                    <div>
+                        <span style="font-weight:600; font-size:0.88rem; color:#1565c0;">✅ ${name}</span>
+                        <span style="font-size:0.78rem; color:#888; margin-left:6px;">${dept}</span>
+                    </div>
+                    <span style="font-size:0.78rem; color:#666; white-space:nowrap;">${time}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function updateQRSummary() {
+            const session = getQRSession();
+            if (!session) return;
+            const n       = (session.checkins || []).length;
+            const total   = getMembers().length;
+            const d       = new Date(session.date);
+            const months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const dStr    = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+            document.getElementById('qrSummary').textContent =
+                `📋 ${session.service} · ${dStr} · ${n} of ${total} members checked in via QR`;
+        }
+
+        // ── Apply QR check-ins to the main attendance table ───
+        function syncQRToAttendance() {
+            const session = getQRSession();
+            if (!session || !session.checkins || !session.checkins.length) {
+                showToast('⚠️ No QR check-ins to apply yet.', true);
+                return;
+            }
+
+            // Sync service date & type to mark attendance tab
+            document.getElementById('serviceDate').value  = session.date;
+            document.getElementById('serviceType').value  = session.service;
+
+            // Switch to mark tab so user can see the result
+            switchTab('mark');
+
+            // Tick the checkbox for each checked-in member
+            let applied = 0;
+            session.checkins.forEach(entry => {
+                const row = document.querySelector(`#attendanceBody tr[data-id="${entry.memberId}"]`);
+                if (row) {
+                    const cb = row.querySelector('input[type="checkbox"]');
+                    if (cb && !cb.checked) {
+                        cb.checked = true;
+                        updateRowStatus(cb);
+                        applied++;
+                    }
+                }
+            });
+
+            showToast(`✅ ${applied} QR check-in${applied !== 1 ? 's' : ''} applied to attendance list.`);
+        }
+
+        // ── Clear QR Session ──────────────────────────────────
+        function clearQRSession() {
+            if (!confirm('Clear the current QR check-in session? This will not affect submitted attendance.')) return;
+            localStorage.removeItem(QR_SESSION_KEY);
+            document.getElementById('qrDisplay').style.display = 'none';
+            if (qrPollTimer) { clearInterval(qrPollTimer); qrPollTimer = null; }
+            lastCheckinCount = 0;
+            showToast('🗑️ QR session cleared.');
+        }
+
+        // ── Print QR Code ─────────────────────────────────────
+        function printQR() {
+            const session = getQRSession();
+            const canvas  = document.querySelector('#qrcode canvas');
+            const img     = document.querySelector('#qrcode img');
+            const src     = canvas ? canvas.toDataURL() : (img ? img.src : '');
+            if (!src) { showToast('⚠️ QR code not generated yet.', true); return; }
+
+            const d       = session ? new Date(session.date) : new Date();
+            const months  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const dStr    = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+            const service = session ? session.service : '';
+
+            const win = window.open('', '_blank');
+            win.document.write(`<!DOCTYPE html><html><head>
+                <title>QR Check-In — ${dStr}</title>
+                <style>
+                    body { font-family:'Segoe UI',sans-serif; text-align:center; padding:40px; }
+                    h2   { color:#1b5e20; margin-bottom:6px; }
+                    p    { color:#666; margin-bottom:24px; }
+                    img  { border:3px solid #1565c0; border-radius:12px; padding:12px; }
+                    .footer { margin-top:24px; font-size:0.8rem; color:#aaa; }
+                    @media print { button { display:none; } }
+                </style></head><body>
+                <h2>ICGC Church — QR Check-In</h2>
+                <p>${service} &nbsp;·&nbsp; ${dStr}</p>
+                <p style="font-size:0.9rem;color:#555;">Scan this code with your phone camera to check in</p>
+                <img src="${src}" width="220" height="220" alt="QR Code">
+                <p style="margin-top:18px; font-size:0.88rem; color:#1565c0; font-weight:600;">
+                    Point your phone camera at this QR code
+                </p>
+                <button onclick="window.print()" style="margin-top:16px;padding:10px 24px;background:#1565c0;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.9rem;">🖨 Print</button>
+                <div class="footer">Generated ${new Date().toLocaleString()} · ICGC Management System</div>
+                </body></html>`);
+            win.document.close();
+        }
+
+        // ── Dark Mode ─────────────────────────────────────────
+        function applyTheme() {
+            const t = localStorage.getItem('icgc_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+            const btn = document.getElementById('darkBtn');
+            if (btn) btn.textContent = t === 'dark' ? '☀ Light' : '🌙 Dark';
+        }
+        function toggleDark() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const next = isDark ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('icgc_theme', next);
+            const btn = document.getElementById('darkBtn');
+            if (btn) btn.textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
+        }
+
+        // ── Auto Date ─────────────────────────────────────────
+        function setAutoDate() {
+            const now = new Date();
+            const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const d = now.getDate();
+            const s = (d%10===1&&d!==11)?'st':(d%10===2&&d!==12)?'nd':(d%10===3&&d!==13)?'rd':'th';
+            const el = document.getElementById('currentDate');
+            if (el) el.textContent = `${days[now.getDay()]}, ${d}${s} ${months[now.getMonth()]} ${now.getFullYear()}`;
+            // Set today's date as default in service date picker
+            const sd = document.getElementById('serviceDate');
+            if (sd && !sd.value) sd.value = now.toISOString().slice(0,10);
+        }
+
+        // ── Settings (church name) ────────────────────────────
+        function applySettings() {
+            const s  = JSON.parse(localStorage.getItem('icgc_settings') || '{}');
+            const bn = document.getElementById('sidebarBranch');
+            const sn = document.getElementById('sidebarName');
+            if (bn && s.churchName) bn.textContent = s.churchName;
+            if (sn && s.adminName)  sn.textContent = s.adminName + ' Admin';
+        }
+
+        // ── Activity Logger ───────────────────────────────────
+        function logActivity(msg, type) {
+            const list = JSON.parse(localStorage.getItem('icgc_activity') || '[]');
+            list.push({ msg, type: type || 'member', ts: Date.now() });
+            if (list.length > 50) list.splice(0, list.length - 50);
+            localStorage.setItem('icgc_activity', JSON.stringify(list));
+        }
+
+        // ── Logout ────────────────────────────────────────────
+        function confirmLogout()    { document.getElementById('logoutModal').classList.add('active'); }
+        function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('active'); }
+        function doLogout()         { location.href = 'l1.html'; }
 
         // ── Toast ─────────────────────────────────────────────
         function showToast(msg, isError = false) {
             const toast = document.getElementById('toast');
             toast.textContent = msg;
-            toast.style.background = isError ? '#c62828' : 'var(--dark-green)';
+            toast.style.background = isError ? '#c62828' : 'var(--dark-green,#1b5e20)';
             toast.classList.remove('show');
             void toast.offsetWidth;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3200);
         }
+
+        // ── Init ──────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme();
+            applySettings();
+            setAutoDate();
+            renderRoll();
+        });
+
+        // ── Auto-refresh when scanner updates localStorage ────
+        // This fires when scanner.html (in another tab) writes to icgc_members
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'icgc_members' || e.key === 'icgc_attendance_lastSeen') {
+                renderRoll(
+                    document.querySelector('.search-input')?.value || '',
+                    document.getElementById('filterGroup')?.value  || '',
+                    document.getElementById('filterGender')?.value || ''
+                );
+                // Show brief toast
+                const toast = document.getElementById('toast');
+                if (toast) {
+                    toast.textContent = '🔄 Attendance roll updated — new check-in detected.';
+                    toast.style.background = 'var(--dark-green,#1b5e20)';
+                    toast.classList.remove('show');
+                    void toast.offsetWidth;
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 3000);
+                }
+            }
+            if (e.key === 'icgc_attendance_sessions') {
+                updateCount();
+            }
+        });
     </script>
 
 

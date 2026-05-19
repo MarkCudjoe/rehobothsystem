@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -315,7 +315,7 @@
 
         .modal {
             background: var(--white);
-            padding: 30px;
+            padding: 70px 20px 30px 20px;
             border-radius: 12px;
             width: 420px;
             max-width: 95%;
@@ -637,18 +637,90 @@
             }
         }
 
+
+        /* ── Dark Mode Variables ─────────────────────────────── */
+        [data-theme="dark"] {
+            --bg:#121212; --card-bg:#1e1e1e; --card-shadow:0 2px 10px rgba(0,0,0,0.4);
+            --border:#333; --text:#e0e0e0; --subtext:#aaa; --text-grey:#aaa;
+            --white:#1e1e1e; --light-green:#1b3a1f;
+            --primary-green:#43a047; --dark-green:#2e7d32;
+        }
+        body { transition: background 0.3s, color 0.3s; }
+        .stat-card, .modal, .member-table-container, .inventory-card,
+        .attendance-card, .table-container, .finance-form, .controls-card,
+        .finance-grid > div, .notes-card, .activity-card {
+            background: var(--card-bg) !important;
+            color: var(--text) !important;
+        }
+        .main-content { background: var(--bg); }
+        table th, table td { color: var(--text); }
+        .form-group input, .form-group select,
+        .modal-form-group input, .modal-form-group select,
+        .search-input, .notes-ta {
+            background: var(--bg) !important;
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+        }
+
+        /* ── Top Bar ─────────────────────────────────────────── */
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 52px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; z-index: 1000;
+            background: var(--bg, #f4f7f6); border-bottom: 1px solid var(--border, #e0e0e0);
+            transition: background 0.3s;
+        }
+        .top-right { display: flex; gap: 8px; align-items: center; }
+        .icon-btn {
+            background: var(--card-bg, #fff); border: 1px solid var(--border, #ddd);
+            color: var(--text, #333); padding: 6px 12px; border-radius: 6px;
+            cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: 0.2s;
+        }
+        .icon-btn:hover { border-color: var(--primary-green, #2e7d32); }
+
+        /* Church branch subtitle in sidebar */
+        .church-branch { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-top: 3px; }
     </style>
+
+    <style media="print">
+        /* ── Print / PDF Styles ── */
+        body { background: white !important; display: block !important; }
+        .sidebar, .menu-btn, #overlay, .finance-form,
+        .edit-btn, .delete-btn, .save-btn,
+        .logout-btn, .modal-backdrop, .toast,
+        .action-bar, button { display: none !important; }
+        .main-content { padding: 10px !important; width: 100% !important; }
+        .stats-grid { display: grid !important; grid-template-columns: repeat(4,1fr) !important; gap: 10px !important; margin-bottom: 16px !important; }
+        .stat-card { border: 1px solid #ccc !important; border-left: 4px solid #2e7d32 !important; padding: 12px !important; border-radius: 6px !important; box-shadow: none !important; }
+        .stat-card h3 { font-size: 0.75rem !important; }
+        .stat-card p  { font-size: 1.2rem !important; }
+        .finance-grid { display: block !important; }
+        .table-container { box-shadow: none !important; border: 1px solid #ddd !important; padding: 10px !important; }
+        table { min-width: unset !important; width: 100% !important; }
+        th, td { font-size: 0.82rem !important; padding: 8px !important; }
+        .section-title { margin-top: 0 !important; }
+        .print-header { display: block !important; text-align: center; margin-bottom: 16px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
-    <div id="overlay" onclick="toggleSidebar()"></div>
-
+    
+<!-- Top Bar -->
+<div class="top-bar">
     <button class="menu-btn" onclick="toggleSidebar()">☰ MENU</button>
+    <div class="top-right">
+        <button class="icon-btn" id="darkBtn" onclick="toggleDark()">🌙 Dark</button>
+    </div>
+</div>
+
+<div id="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <img src="ICGCNCT.PNG" alt="Logo">
-            <h3>ICGC Admin</h3>
+            <h3 id="sidebarName">ICGC Admin</h3>
+        <div class="church-branch" id="sidebarBranch"></div>
         </div>
         <ul class="nav-menu">
             <a href="h2.html" style="text-decoration: none; color: inherit;">
@@ -666,10 +738,19 @@
             <a href="attendance.html" style="text-decoration: none; color: inherit;">
                 <li class="nav-item">Attendance</li>
             </a>
+            <a href="scanner.html" style="text-decoration:none;color:inherit;"><li class="nav-item">📷 QR Scanner</li></a>
         </ul>
     </div>
 
     <div class="main-content">
+
+        <!-- Print-only header (hidden on screen) -->
+        <div class="print-header" style="display:none;">
+            <h2 style="color:#1b5e20; margin-bottom:4px;">ICGC Church Management System</h2>
+            <h3 style="margin-bottom:4px;">Finance Report</h3>
+            <p id="printDate" style="color:#666; font-size:0.85rem;"></p>
+        </div>
+
         <div class="header">
             <h1>Finance Tracking</h1>
             <span class="current-date" id="currentDate"></span>
@@ -693,6 +774,19 @@
                 <h3>Net Balance</h3>
                 <p id="cardBalance">GHS 120,900.00</p>
             </div>
+        </div>
+
+        <!-- Monthly Income vs Expense Chart -->
+        <div style="background:var(--card-bg,white); border-radius:12px; padding:22px 25px;
+                    box-shadow:0 2px 10px rgba(0,0,0,0.05);
+                    border-left:5px solid var(--primary-green,#2e7d32); margin-bottom:22px;">
+            <h2 style="color:var(--dark-green,#1b5e20); font-size:1.05rem; margin-bottom:16px; font-weight:700;">
+                📊 Monthly Income vs Expenses
+            </h2>
+            <canvas id="monthlyChart" style="width:100%; max-height:240px;"></canvas>
+            <p id="chartEmpty" style="text-align:center;color:#999;font-size:0.85rem;padding:20px;display:none;">
+                No transactions yet — add some to see the chart.
+            </p>
         </div>
 
         <h2 class="section-title">Record &amp; Review Transactions</h2>
@@ -731,13 +825,22 @@
             <div class="table-container">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                     <h2>Recent Transactions</h2>
-                    <button onclick="exportCSV()" style="
-                        background: var(--primary-green); color: white;
-                        border: none; padding: 8px 16px; border-radius: 7px;
-                        font-weight: bold; font-size: 0.85rem; cursor: pointer;
-                        transition: background 0.2s;">
-                        ⬇ Export CSV
-                    </button>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="exportCSV()" style="
+                            background: var(--primary-green); color: white;
+                            border: none; padding: 8px 16px; border-radius: 7px;
+                            font-weight: bold; font-size: 0.85rem; cursor: pointer;
+                            transition: background 0.2s;">
+                            ⬇ Export CSV
+                        </button>
+                        <button onclick="exportPDF()" style="
+                            background: #c62828; color: white;
+                            border: none; padding: 8px 16px; border-radius: 7px;
+                            font-weight: bold; font-size: 0.85rem; cursor: pointer;
+                            transition: background 0.2s;">
+                            🖨 Export PDF
+                        </button>
+                    </div>
                 </div>
                 <table>
                     <thead>
@@ -967,6 +1070,53 @@
             document.getElementById('cardTithes').textContent   = 'GHS ' + fmt(tithes);
             document.getElementById('cardExpenses').textContent = 'GHS ' + fmt(expenses);
             document.getElementById('cardBalance').textContent  = 'GHS ' + fmt(revenue - expenses);
+            drawChart(list);
+        }
+
+        // ── Monthly Chart ─────────────────────────────────────
+        let chartInstance = null;
+        function drawChart(list) {
+            const canvas = document.getElementById('monthlyChart');
+            const empty  = document.getElementById('chartEmpty');
+            if (!list.length) { canvas.style.display='none'; empty.style.display='block'; return; }
+            canvas.style.display='block'; empty.style.display='none';
+
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const now    = new Date();
+            // Build last 6 months
+            const buckets = [];
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                buckets.push({ label: months[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2), month: d.getMonth(), year: d.getFullYear(), income: 0, expense: 0 });
+            }
+            list.forEach(tx => {
+                const d = new Date(tx.date);
+                if (isNaN(d)) return;
+                const b = buckets.find(x => x.month === d.getMonth() && x.year === d.getFullYear());
+                if (!b) return;
+                if (tx.expense) b.expense += tx.amount; else b.income += tx.amount;
+            });
+
+            if (chartInstance) chartInstance.destroy();
+            const ctx = canvas.getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: buckets.map(b => b.label),
+                    datasets: [
+                        { label: 'Income',   data: buckets.map(b => b.income),  backgroundColor: '#43a04788', borderColor: '#2e7d32', borderWidth: 2, borderRadius: 5 },
+                        { label: 'Expenses', data: buckets.map(b => b.expense), backgroundColor: '#ef535088', borderColor: '#c62828', borderWidth: 2, borderRadius: 5 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top', labels: { font: { size: 12 } } } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: v => 'GHS ' + v.toLocaleString() } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -976,11 +1126,27 @@
         function saveTransaction() {
             const dateVal = document.getElementById('txDate').value;
             const cat     = document.getElementById('txCategory').value;
-            const amount  = parseFloat(document.getElementById('txAmount').value);
+            const rawAmt  = document.getElementById('txAmount').value;
+            const amount  = parseFloat(rawAmt);
             const desc    = document.getElementById('txDesc').value.trim();
 
-            if (!dateVal || isNaN(amount) || amount <= 0 || !desc) {
-                showToast('⚠️ Please fill in all fields with valid values.', true);
+            if (!dateVal) {
+                showToast('⚠️ Please select a date.', true); return;
+            }
+            if (!desc) {
+                showToast('⚠️ Please enter a description.', true); return;
+            }
+            if (rawAmt === '' || isNaN(amount)) {
+                showToast('⚠️ Please enter a valid amount.', true); return;
+            }
+            if (amount < 0) {
+                showToast('⚠️ Amount cannot be negative. Please enter a positive value.', true);
+                document.getElementById('txAmount').value = '';
+                return;
+            }
+            if (amount === 0) {
+                showToast('⚠️ Amount must be greater than zero.', true);
+                document.getElementById('txAmount').value = '';
                 return;
             }
 
@@ -993,6 +1159,7 @@
             document.getElementById('txAmount').value   = '';
             document.getElementById('txDesc').value     = '';
             document.getElementById('txCategory').value = 'Tithe';
+            logActivity(`💰 Transaction recorded: ${desc} — GHS ${amount.toFixed(2)}`, 'finance');
             showToast('✅ Transaction saved successfully!');
         }
 
@@ -1019,11 +1186,27 @@
         function saveEdit() {
             const dateVal = document.getElementById('editDate').value;
             const cat     = document.getElementById('editCategory').value;
-            const amount  = parseFloat(document.getElementById('editAmount').value);
+            const rawAmt  = document.getElementById('editAmount').value;
+            const amount  = parseFloat(rawAmt);
             const desc    = document.getElementById('editDesc').value.trim();
 
-            if (!dateVal || isNaN(amount) || amount <= 0 || !desc) {
-                showToast('⚠️ Please fill in all fields with valid values.', true);
+            if (!dateVal) {
+                showToast('⚠️ Please select a date.', true); return;
+            }
+            if (!desc) {
+                showToast('⚠️ Please enter a description.', true); return;
+            }
+            if (rawAmt === '' || isNaN(amount)) {
+                showToast('⚠️ Please enter a valid amount.', true); return;
+            }
+            if (amount < 0) {
+                showToast('⚠️ Amount cannot be negative. Please enter a positive value.', true);
+                document.getElementById('editAmount').value = '';
+                return;
+            }
+            if (amount === 0) {
+                showToast('⚠️ Amount must be greater than zero.', true);
+                document.getElementById('editAmount').value = '';
                 return;
             }
 
@@ -1035,6 +1218,7 @@
             saveTx(list);
             renderAll();
             closeEditModal();
+            logActivity(`✏️ Transaction updated: ${desc}`, 'finance');
             showToast('✅ Transaction updated successfully!');
         }
 
@@ -1045,22 +1229,39 @@
             const row = btn.closest('tr');
             deletingTxId = parseInt(row.dataset.id);
             const tx = getTx().find(t => t.id === deletingTxId);
-            document.getElementById('deleteDesc').textContent = tx ? tx.desc : '';
+            document.getElementById('deleteDesc').textContent = tx ? `${tx.desc} (GHS ${fmt(tx.amount)})` : '';
             document.getElementById('deleteModal').classList.add('active');
         }
 
         function confirmDelete() {
-            if (deletingTxId) {
-                saveTx(getTx().filter(t => t.id !== deletingTxId));
-                renderAll();
+            if (deletingTxId !== null) {
+                const updated = getTx().filter(t => t.id !== deletingTxId);
+                saveTx(updated);
                 deletingTxId = null;
+                closeDeleteModal();
+                renderAll(); // recalculates and updates all 4 summary cards
+                logActivity('🗑️ Transaction deleted', 'finance');
+                showToast('🗑️ Transaction deleted and totals updated.');
             }
-            closeDeleteModal();
-            showToast('🗑️ Transaction deleted.');
         }
 
         function closeDeleteModal() {
             document.getElementById('deleteModal').classList.remove('active');
+        }
+
+        // ── Export PDF (print dialog) ─────────────────────────
+        function exportPDF() {
+            const list = getTx();
+            if (!list.length) { showToast('⚠️ No transactions to export.', true); return; }
+
+            // Set print date
+            const now = new Date();
+            const months = ['January','February','March','April','May','June',
+                            'July','August','September','October','November','December'];
+            document.getElementById('printDate').textContent =
+                `Generated: ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()} at ${now.toLocaleTimeString()}`;
+
+            window.print();
         }
 
         // ── Export CSV ────────────────────────────────────────
@@ -1098,6 +1299,40 @@
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3200);
         }
+
+        // ── Dark Mode ─────────────────────────────────────────
+        function applyTheme() {
+            const t = localStorage.getItem('icgc_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+            const btn = document.getElementById('darkBtn');
+            if (btn) btn.textContent = t === 'dark' ? '☀ Light' : '🌙 Dark';
+        }
+        function toggleDark() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const next = isDark ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('icgc_theme', next);
+            const btn = document.getElementById('darkBtn');
+            if (btn) btn.textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
+        }
+
+        // ── Activity Logger ───────────────────────────────────
+        function logActivity(msg, type) {
+            const list = JSON.parse(localStorage.getItem('icgc_activity') || '[]');
+            list.push({ msg, type: type || 'member', ts: Date.now() });
+            if (list.length > 50) list.splice(0, list.length - 50);
+            localStorage.setItem('icgc_activity', JSON.stringify(list));
+        }
+
+        // ── Settings (church name in sidebar) ────────────────
+        function applySettings() {
+            const s = JSON.parse(localStorage.getItem('icgc_settings') || '{}');
+            const bn = document.getElementById('sidebarBranch');
+            const sn = document.getElementById('sidebarName');
+            if (bn && s.churchName) bn.textContent  = s.churchName;
+            if (sn && s.adminName)  sn.textContent  = s.adminName + ' Admin';
+        }
+
     </script>
 
     <!-- Logout Confirmation Modal -->

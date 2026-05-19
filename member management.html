@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -165,11 +165,13 @@
         .search-input {
             padding: 10px 14px;
             width: 300px;
-            border: 1px solid #ddd;
+            border: 1.5px solid #ccc;
             border-radius: 8px;
             font-size: 0.9rem;
             outline: none;
             transition: border-color 0.2s;
+            background-color: #ffffff !important;
+            color: #222 !important;
         }
 
         .search-input:focus {
@@ -293,7 +295,7 @@
 
         .modal {
             background: var(--white);
-            padding: 30px;
+            padding: 70px 20px 30px 20px;
             border-radius: 12px;
             width: 420px;
             max-width: 95%;
@@ -322,11 +324,13 @@
         .form-group select {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1.5px solid #ccc;
             border-radius: 6px;
             font-size: 0.9rem;
             outline: none;
             transition: border-color 0.2s;
+            background-color: #ffffff !important;
+            color: #222 !important;
         }
 
         .form-group input:focus,
@@ -576,18 +580,69 @@
             }
         }
 
+
+        /* ── Dark Mode Variables ─────────────────────────────── */
+        [data-theme="dark"] {
+            --bg:#121212; --card-bg:#1e1e1e; --card-shadow:0 2px 10px rgba(0,0,0,0.4);
+            --border:#333; --text:#e0e0e0; --subtext:#aaa; --text-grey:#aaa;
+            --white:#1e1e1e; --light-green:#1b3a1f;
+            --primary-green:#43a047; --dark-green:#2e7d32;
+        }
+        body { transition: background 0.3s, color 0.3s; }
+        .stat-card, .modal, .member-table-container, .inventory-card,
+        .attendance-card, .table-container, .finance-form, .controls-card,
+        .finance-grid > div, .notes-card, .activity-card {
+            background: var(--card-bg) !important;
+            color: var(--text) !important;
+        }
+        .main-content { background: var(--bg); }
+        table th, table td { color: var(--text); }
+        .form-group input, .form-group select,
+        .modal-form-group input, .modal-form-group select,
+        .search-input, .notes-ta {
+            background: var(--bg) !important;
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+        }
+
+        /* ── Top Bar ─────────────────────────────────────────── */
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 52px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; z-index: 1000;
+            background: var(--bg, #f4f7f6); border-bottom: 1px solid var(--border, #e0e0e0);
+            transition: background 0.3s;
+        }
+        .top-right { display: flex; gap: 8px; align-items: center; }
+        .icon-btn {
+            background: var(--card-bg, #fff); border: 1px solid var(--border, #ddd);
+            color: var(--text, #333); padding: 6px 12px; border-radius: 6px;
+            cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: 0.2s;
+        }
+        .icon-btn:hover { border-color: var(--primary-green, #2e7d32); }
+
+        /* Church branch subtitle in sidebar */
+        .church-branch { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-top: 3px; }
     </style>
 </head>
 <body>
 
-    <div id="overlay" onclick="toggleSidebar()"></div>
-
+    
+<!-- Top Bar -->
+<div class="top-bar">
     <button class="menu-btn" onclick="toggleSidebar()">☰ MENU</button>
+    <div class="top-right">
+        <button class="icon-btn" id="darkBtn" onclick="toggleDark()">🌙 Dark</button>
+    </div>
+</div>
+
+<div id="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <img src="ICGCNCT.PNG" alt="Logo">
-            <h3>ICGC Admin</h3>
+            <h3 id="sidebarName">ICGC Admin</h3>
+        <div class="church-branch" id="sidebarBranch"></div>
         </div>
         <ul class="nav-menu">
             <a href="h2.html" style="text-decoration: none; color: inherit;">
@@ -605,6 +660,7 @@
             <a href="attendance.html" style="text-decoration: none; color: inherit;">
                 <li class="nav-item">Attendance</li>
             </a>
+            <a href="scanner.html" style="text-decoration:none;color:inherit;"><li class="nav-item">📷 QR Scanner</li></a>
         </ul>
     </div>
 
@@ -616,9 +672,10 @@
 
         <!-- Summary Cards -->
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="stat-card" onclick="openMemberListModal()" style="cursor:pointer;" title="Click to view all members">
                 <h3>Total Members</h3>
                 <p id="statTotal">—</p>
+                <div style="font-size:0.72rem;color:var(--primary-green);margin-top:4px;font-weight:600;">👆 View All</div>
             </div>
             <div class="stat-card">
                 <h3>Active Members</h3>
@@ -634,12 +691,69 @@
             </div>
         </div>
 
+        <!-- Gender Breakdown Bar -->
+        <div style="background:white; border-radius:12px; padding:20px 25px;
+                    box-shadow:0 2px 10px rgba(0,0,0,0.05);
+                    border-left:5px solid var(--primary-green); margin-bottom:25px;">
+            <h3 style="color:var(--dark-green); font-size:1rem; margin-bottom:15px;">Gender Breakdown</h3>
+            <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:14px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:14px;height:14px;border-radius:50%;background:#1565c0;"></div>
+                    <span style="font-size:0.9rem; color:#555;">Male: <strong id="statMale">—</strong></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:14px;height:14px;border-radius:50%;background:#e91e8c;"></div>
+                    <span style="font-size:0.9rem; color:#555;">Female: <strong id="statFemale">—</strong></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:14px;height:14px;border-radius:50%;background:#ff9800;"></div>
+                    <span style="font-size:0.9rem; color:#555;">Children: <strong id="statChild">—</strong></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:14px;height:14px;border-radius:50%;background:#ccc;"></div>
+                    <span style="font-size:0.9rem; color:#555;">Unspecified: <strong id="statUnspecified">—</strong></span>
+                </div>
+            </div>
+            <!-- Stacked progress bar -->
+            <div style="display:flex; border-radius:8px; overflow:hidden; height:20px; background:#eee;" id="genderBar">
+                <div id="barMale"   style="background:#1565c0; height:100%; transition:width 0.4s;" title="Male"></div>
+                <div id="barFemale" style="background:#e91e8c; height:100%; transition:width 0.4s;" title="Female"></div>
+                <div id="barChild"  style="background:#ff9800; height:100%; transition:width 0.4s;" title="Children"></div>
+                <div id="barUnspec" style="background:#ccc;    height:100%; transition:width 0.4s;" title="Unspecified"></div>
+            </div>
+        </div>
+
+        <!-- Birthday Tracker -->
+        <div style="background:var(--card-bg,white); border-radius:12px; padding:20px 25px;
+                    box-shadow:0 2px 10px rgba(0,0,0,0.05);
+                    border-left:5px solid #e91e8c; margin-bottom:20px;">
+            <h3 style="color:#c2185b; font-size:1rem; margin-bottom:12px;">🎂 Upcoming Birthdays</h3>
+            <div id="birthdayList" style="font-size:0.88rem; color:var(--text-grey,#555);"></div>
+        </div>
+
+        <!-- Directory Tabs -->
+        <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+            <button id="tabMembers" onclick="switchDirTab('members')"
+                style="padding:9px 20px;border-radius:8px;border:none;font-weight:bold;font-size:0.88rem;cursor:pointer;background:var(--primary-green);color:white;">
+                👥 Member Directory
+            </button>
+            <button id="tabVisitors" onclick="switchDirTab('visitors')"
+                style="padding:9px 20px;border-radius:8px;border:2px solid #e65100;font-weight:bold;font-size:0.88rem;cursor:pointer;background:white;color:#e65100;">
+                🙋 Visitor Records
+            </button>
+        </div>
+
+        <!-- Member Directory Panel -->
+        <div id="panelMembers">
         <h2 class="section-title">Member Directory</h2>
 
         <!-- Search + Add -->
         <div class="action-bar">
             <input type="text" class="search-input" placeholder="Search by name, ID or phone..." oninput="filterTable(this.value)">
             <button class="add-btn" onclick="openModal()">+ Add New Member</button>
+            <a href="qrcodes.html" style="text-decoration:none;">
+                <button class="add-btn" style="background:#7b1fa2;">🔲 Church QR Code</button>
+            </a>
         </div>
 
         <!-- Table -->
@@ -651,38 +765,25 @@
                         <th>Full Name</th>
                         <th>Phone Number</th>
                         <th>Group / Department</th>
+                        <th>Gender</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="memberBody">
-                    <tr>
-                        <td>#ICGC-001</td>
-                        <td>Kofi Mensah</td>
-                        <td>024 123 4567</td>
-                        <td>Choir</td>
-                        <td><span class="status active-status">Active</span></td>
-                        <td><span class="edit-btn" onclick="editRow(this)">Edit</span><span class="delete-btn" onclick="deleteRow(this)">Delete</span></td>
-                    </tr>
-                    <tr>
-                        <td>#ICGC-002</td>
-                        <td>Ama Serwaa</td>
-                        <td>055 987 6543</td>
-                        <td>Youth Ministry</td>
-                        <td><span class="status active-status">Active</span></td>
-                        <td><span class="edit-btn" onclick="editRow(this)">Edit</span><span class="delete-btn" onclick="deleteRow(this)">Delete</span></td>
-                    </tr>
-                    <tr>
-                        <td>#ICGC-003</td>
-                        <td>John Doe</td>
-                        <td>020 444 5555</td>
-                        <td>Visitor</td>
-                        <td><span class="status visitor-status">Visitor</span></td>
-                        <td><span class="edit-btn" onclick="editRow(this)">Edit</span><span class="delete-btn" onclick="deleteRow(this)">Delete</span></td>
-                    </tr>
                 </tbody>
             </table>
         </div>
+    </div>
+    </div><!-- end panelMembers -->
+
+    <!-- Visitor Records Panel -->
+    <div id="panelVisitors" style="display:none;">
+        <h2 class="section-title">🙋 Visitor Records</h2>
+        <p style="font-size:0.85rem;color:#888;margin-bottom:16px;">
+            Visitors who scanned the QR code and filled the "Let's Get Acquainted" form appear here.
+        </p>
+        <div id="visitorRecordsList"></div>
     </div>
 
     <!-- Add / Edit Member Modal -->
@@ -700,14 +801,46 @@
             <div class="form-group">
                 <label>Group / Department</label>
                 <select id="newDept">
-                    <option>Choir</option>
-                    <option>Youth Ministry</option>
-                    <option>Ushering</option>
-                    <option>Media</option>
-                    <option>Men's Fellowship</option>
-                    <option>Women's Fellowship</option>
-                    <option>Visitor</option>
+                    <option value="">— Select Department —</option>
+                    <optgroup label="Men">
+                        <option>Mighty Men of Valor (MMV)</option>
+                    </optgroup>
+                    <optgroup label="Women">
+                        <option>Precious Vessels of Virtue (PVV)</option>
+                    </optgroup>
+                    <optgroup label="Youth">
+                        <option>Omega Generation</option>
+                        <option>New Breed</option>
+                    </optgroup>
+                    <optgroup label="Children">
+                        <option>Children — Love Class (0–5 yrs)</option>
+                        <option>Children — Joy Class (6–8 yrs)</option>
+                        <option>Children — Peace Class (9–11 yrs)</option>
+                    </optgroup>
+                    <optgroup label="Ministry Teams">
+                        <option>Choir</option>
+                        <option>Ushering</option>
+                        <option>Media</option>
+                        <option>Intercessory Ministry</option>
+                        <option>Welfare Department</option>
+                        <option>Accounts Department</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                        <option>Visitor</option>
+                    </optgroup>
                 </select>
+            </div>
+            <div class="form-group">
+                <label>Gender</label>
+                <select id="newGender">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="child">Child</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Date of Birth <span style="font-size:0.78rem;color:#999;">(optional)</span></label>
+                <input type="date" id="newDOB">
             </div>
             <div class="form-group">
                 <label>Status</label>
@@ -749,9 +882,9 @@
 
         // Seed data shown on first load
         const SEED_MEMBERS = [
-            { id: 'ICGC-001', name: 'Kofi Mensah',  phone: '024 123 4567', dept: 'Choir',          status: 'active'  },
-            { id: 'ICGC-002', name: 'Ama Serwaa',   phone: '055 987 6543', dept: 'Youth Ministry', status: 'active'  },
-            { id: 'ICGC-003', name: 'John Doe',     phone: '020 444 5555', dept: 'Visitor',         status: 'visitor' }
+            { id: 'ICGC-001', name: 'Kofi Mensah',  phone: '024 123 4567', dept: 'Choir',          status: 'active',  gender: 'male'   },
+            { id: 'ICGC-002', name: 'Ama Serwaa',   phone: '055 987 6543', dept: 'Youth Ministry', status: 'active',  gender: 'female' },
+            { id: 'ICGC-003', name: 'John Doe',     phone: '020 444 5555', dept: 'Visitor',         status: 'visitor', gender: 'male'   }
         ];
 
         function loadMembers() {
@@ -783,7 +916,7 @@
             tbody.innerHTML = '';
 
             if (!members.length) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:#999;">
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#999;">
                     <div style="font-size:2rem; margin-bottom:10px;">👥</div>
                     <div style="font-weight:600;">No members in the directory yet.</div>
                     <div style="font-size:0.85rem; margin-top:5px;">Click <strong>+ Add New Member</strong> to get started.</div>
@@ -792,20 +925,36 @@
                 return;
             }
 
+            const genderIcon  = { male: '👨', female: '👩', child: '🧒' };
+            const genderLabel = { male: 'Male', female: 'Female', child: 'Child' };
+            const genderColor = { male: '#1565c0', female: '#e91e8c', child: '#ff9800' };
+
             members.forEach(m => {
                 const statusLabel = m.status === 'active' ? 'Active' : 'Visitor';
                 const statusClass = m.status === 'active' ? 'active-status' : 'visitor-status';
-                const row = document.createElement('tr');
+                const g     = m.gender || 'unspecified';
+                const gIcon = genderIcon[g]  || '👤';
+                const gLbl  = genderLabel[g] || 'Unspecified';
+                const gClr  = genderColor[g] || '#999';
+                const row   = document.createElement('tr');
                 row.dataset.id = m.id;
                 row.innerHTML = `
                     <td>#${m.id}</td>
                     <td>${m.name}</td>
                     <td>${m.phone}</td>
                     <td>${m.dept}</td>
+                    <td>
+                        <span style="background:${gClr}18; color:${gClr};
+                            padding:4px 10px; border-radius:20px;
+                            font-size:0.78rem; font-weight:bold;">
+                            ${gIcon} ${gLbl}
+                        </span>
+                    </td>
                     <td><span class="status ${statusClass}">${statusLabel}</span></td>
                     <td>
                         <span class="edit-btn" onclick="editRow(this)">Edit</span>
                         <span class="delete-btn" onclick="deleteRow(this)">Delete</span>
+                        <span style="color:#1565c0;cursor:pointer;font-weight:600;font-size:0.82rem;margin-left:8px;" onclick="viewTithes('${m.id}','${m.name}')">💰 Tithes</span>
                     </td>`;
                 tbody.appendChild(row);
             });
@@ -813,21 +962,332 @@
         }
 
         function updateStatCards(members) {
-            const total   = members.length;
-            const active  = members.filter(m => m.status === 'active').length;
-            const visitor = members.filter(m => m.status === 'visitor').length;
-            const depts   = [...new Set(members.map(m => m.dept).filter(d => d !== 'Visitor'))].length;
+            const total    = members.length;
+            const active   = members.filter(m => m.status === 'active').length;
+            const visitor  = members.filter(m => m.status === 'visitor').length;
+            const depts    = [...new Set(members.map(m => m.dept).filter(d => d !== 'Visitor'))].length;
+            const male     = members.filter(m => m.gender === 'male').length;
+            const female   = members.filter(m => m.gender === 'female').length;
+            const child    = members.filter(m => m.gender === 'child').length;
+            const unspec   = total - male - female - child;
+
             document.getElementById('statTotal').textContent    = total;
             document.getElementById('statActive').textContent   = active;
             document.getElementById('statVisitors').textContent = visitor;
             const deptEl = document.getElementById('statDepts');
             if (deptEl) deptEl.textContent = depts;
+
+            document.getElementById('statMale').textContent        = male;
+            document.getElementById('statFemale').textContent      = female;
+            document.getElementById('statChild').textContent       = child;
+            document.getElementById('statUnspecified').textContent = unspec;
+
+            // Update stacked progress bar
+            const pct = (n) => total ? ((n / total) * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('barMale').style.width   = pct(male);
+            document.getElementById('barFemale').style.width = pct(female);
+            document.getElementById('barChild').style.width  = pct(child);
+            document.getElementById('barUnspec').style.width = pct(unspec);
+        }
+
+        // ── Directory Tab Switching ───────────────────────────
+        function switchDirTab(tab) {
+            const panelM  = document.getElementById('panelMembers');
+            const panelV  = document.getElementById('panelVisitors');
+            const btnM    = document.getElementById('tabMembers');
+            const btnV    = document.getElementById('tabVisitors');
+
+            if (tab === 'members') {
+                panelM.style.display = '';
+                panelV.style.display = 'none';
+                btnM.style.background = 'var(--primary-green)';
+                btnM.style.color      = 'white';
+                btnM.style.border     = 'none';
+                btnV.style.background = 'white';
+                btnV.style.color      = '#e65100';
+                btnV.style.border     = '2px solid #e65100';
+            } else {
+                panelM.style.display = 'none';
+                panelV.style.display = '';
+                btnV.style.background = '#e65100';
+                btnV.style.color      = 'white';
+                btnV.style.border     = 'none';
+                btnM.style.background = 'white';
+                btnM.style.color      = 'var(--primary-green)';
+                btnM.style.border     = '2px solid var(--primary-green)';
+                renderVisitorRecords();
+            }
+        }
+
+        // ── Render Visitor Records ────────────────────────────
+        function renderVisitorRecords() {
+            const members  = getMembers();
+            const visitors = members.filter(m => m.status === 'visitor' && m.visitDate);
+            const el       = document.getElementById('visitorRecordsList');
+
+            if (!visitors.length) {
+                el.innerHTML = `<div style="text-align:center;padding:40px;color:#999;">
+                    <div style="font-size:2.5rem;margin-bottom:12px;">🙋</div>
+                    <p style="font-weight:600;">No visitor forms submitted yet.</p>
+                    <p style="font-size:0.85rem;margin-top:6px;">Visitors who fill the QR check-in form will appear here.</p>
+                </div>`; return;
+            }
+
+            // Sort newest first
+            const sorted = [...visitors].sort((a,b) => (b.visitDate||'').localeCompare(a.visitDate||''));
+            const reasonLabel = { stay: '🏠 Staying (Joining)', visit: '✈️ Visiting' };
+            const genderIcon  = { male:'👨', female:'👩', child:'🧒' };
+
+            el.innerHTML = sorted.map(v => `
+                <div style="background:var(--white,white);border-radius:12px;padding:20px 22px;
+                            margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,0.06);
+                            border-left:5px solid #e65100;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                        <div>
+                            <div style="font-size:1rem;font-weight:800;color:var(--dark-green,#1b5e20);">
+                                ${genderIcon[v.gender]||'👤'} ${v.name}
+                            </div>
+                            <div style="font-size:0.78rem;color:#aaa;margin-top:2px;">
+                                Visited: ${v.visitDate || '—'} &nbsp;·&nbsp; ID: ${v.id}
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            ${v.reason ? `<span style="background:#fff3e0;color:#e65100;padding:4px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">${reasonLabel[v.reason]||v.reason}</span>` : ''}
+                            <button onclick="promoteToMember('${v.id}')"
+                                style="background:var(--primary-green,#2e7d32);color:white;border:none;padding:6px 12px;border-radius:7px;font-size:0.78rem;font-weight:700;cursor:pointer;">
+                                ➕ Add as Member
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;font-size:0.85rem;">
+                        ${v.phone       ? `<div><span style="color:#888;font-size:0.75rem;">📞 Phone</span><br><strong>${v.phone}</strong></div>` : ''}
+                        ${v.whatsapp    ? `<div><span style="color:#888;font-size:0.75rem;">💬 WhatsApp</span><br><strong>${v.whatsapp}</strong></div>` : ''}
+                        ${v.ageGroup    ? `<div><span style="color:#888;font-size:0.75rem;">🎂 Age Group</span><br><strong>${v.ageGroup}</strong></div>` : ''}
+                        ${v.occupation  ? `<div><span style="color:#888;font-size:0.75rem;">💼 Occupation</span><br><strong>${v.occupation}</strong></div>` : ''}
+                        ${v.address     ? `<div><span style="color:#888;font-size:0.75rem;">🏡 Address</span><br><strong>${v.address}</strong></div>` : ''}
+                        ${v.location    ? `<div style="grid-column:1/-1;"><span style="color:#888;font-size:0.75rem;">📍 Residential Location</span><br><strong>${v.location}</strong></div>` : ''}
+                    </div>
+                </div>`).join('');
+        }
+
+        // ── Promote visitor to full member ────────────────────
+        function promoteToMember(visitorId) {
+            let members = getMembers();
+            const idx   = members.findIndex(m => m.id === visitorId);
+            if (idx === -1) return;
+            if (!confirm(`Promote ${members[idx].name} to Active Member?`)) return;
+            members[idx].status = 'active';
+            members[idx].dept   = members[idx].dept === 'Visitor' ? 'Choir' : members[idx].dept;
+            saveMembers(members);
+            renderVisitorRecords();
+            renderTable(members);
+            showToast(`✅ ${members[idx].name} promoted to Active Member!`);
+        }
+
+        function showToast(msg, isError = false) {
+            let toast = document.getElementById('mmToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'mmToast';
+                toast.style.cssText = 'position:fixed;bottom:30px;right:30px;padding:14px 22px;border-radius:8px;color:white;font-weight:bold;font-size:0.9rem;z-index:4000;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:none;';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.background = isError ? '#c62828' : '#1b5e20';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3200);
+        }
+
+        // ── Member List Modal ─────────────────────────────────
+        function openMemberListModal() {
+            const members = getMembers();
+            const modal   = document.createElement('div');
+            modal.id      = 'memberListModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;padding:16px;';
+
+            const gIcon = { male:'👨', female:'👩', child:'🧒' };
+            const rows  = members.length
+                ? members.map((m,i) => `
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:10px 12px;font-size:0.82rem;color:#aaa;">${i+1}</td>
+                        <td style="padding:10px 12px;font-weight:600;font-size:0.9rem;">${m.name}</td>
+                        <td style="padding:10px 12px;font-size:0.82rem;color:#555;">${m.dept||'—'}</td>
+                        <td style="padding:10px 12px;font-size:0.82rem;">${gIcon[m.gender]||'👤'} ${m.gender||'—'}</td>
+                        <td style="padding:10px 12px;">
+                            <span style="background:${m.status==='active'?'#c8e6c9':'#fff9c4'};
+                                color:${m.status==='active'?'#2e7d32':'#f9a825'};
+                                padding:3px 8px;border-radius:12px;font-size:0.75rem;font-weight:700;">
+                                ${m.status==='active'?'Active':'Visitor'}
+                            </span>
+                        </td>
+                    </tr>`).join('')
+                : '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">No members yet.</td></tr>';
+
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:14px;width:600px;max-width:100%;
+                            max-height:85vh;overflow:hidden;display:flex;flex-direction:column;
+                            box-shadow:0 16px 48px rgba(0,0,0,0.25);">
+                    <div style="padding:18px 22px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <h2 style="color:#1b5e20;font-size:1.1rem;">👥 All Members</h2>
+                            <p style="font-size:0.8rem;color:#888;margin-top:2px;">${members.length} member${members.length!==1?'s':''} registered</p>
+                        </div>
+                        <button onclick="document.getElementById('memberListModal').remove()"
+                            style="background:#eee;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;">✕ Close</button>
+                    </div>
+                    <div style="padding:12px 22px;border-bottom:1px solid #eee;">
+                        <input type="text" placeholder="Search members..." oninput="filterMemberModal(this.value)"
+                            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9rem;outline:none;background:#fff;color:#222;">
+                    </div>
+                    <div style="overflow-y:auto;flex:1;">
+                        <table style="width:100%;border-collapse:collapse;">
+                            <thead style="position:sticky;top:0;background:#f9f9f9;">
+                                <tr>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">#</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Name</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Department</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Gender</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="memberModalBody">${rows}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        function filterMemberModal(q) {
+            document.querySelectorAll('#memberModalBody tr').forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+            });
+        }
+
+        // ── Birthday Tracker ──────────────────────────────────
+        function loadBirthdays() {
+            const members = getMembers();
+            const now     = new Date();
+            const upcoming = [];
+
+            members.forEach(m => {
+                if (!m.dob) return;
+                const dob  = new Date(m.dob);
+                const bday = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
+                if (bday < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+                    bday.setFullYear(now.getFullYear() + 1);
+                }
+                const days = Math.round((bday - now) / 86400000);
+                if (days <= 30) upcoming.push({ name: m.name, dob: m.dob, days });
+            });
+
+            upcoming.sort((a, b) => a.days - b.days);
+
+            const el = document.getElementById('birthdayList');
+            if (!upcoming.length) {
+                el.innerHTML = '<span style="color:#999;">No upcoming birthdays in the next 30 days.</span>';
+                return;
+            }
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            el.innerHTML = upcoming.map(u => {
+                const d = new Date(u.dob);
+                const label = u.days === 0 ? '🎉 Today!' : u.days === 1 ? 'Tomorrow' : `In ${u.days} days`;
+                const color = u.days === 0 ? '#c2185b' : u.days <= 3 ? '#e65100' : '#555';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;
+                            padding:7px 0;border-bottom:1px solid var(--border,#eee);">
+                    <span>🎂 <strong>${u.name}</strong> &nbsp;<span style="color:#999;font-size:0.8rem;">${d.getDate()} ${months[d.getMonth()]}</span></span>
+                    <span style="color:${color};font-weight:bold;font-size:0.82rem;">${label}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // ── QR Code Viewer ────────────────────────────────────
+        function viewQR(memberId, memberName) {
+            const members = getMembers();
+            const m = members.find(x => x.id === memberId);
+            if (!m) return;
+
+            const payload = JSON.stringify({ type: 'ICGC_MEMBER', id: m.id, name: m.name });
+
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:5000;display:flex;justify-content:center;align-items:center;';
+            modal.innerHTML = `
+                <div style="background:var(--card-bg,white);border-radius:16px;padding:28px 24px;width:320px;max-width:95%;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,0.3);">
+                    <div style="font-size:0.72rem;color:#999;font-family:monospace;margin-bottom:4px;">#${m.id}</div>
+                    <h2 style="color:var(--dark-green,#1b5e20);margin-bottom:3px;font-size:1.1rem;">${m.name}</h2>
+                    <div style="font-size:0.82rem;color:#888;margin-bottom:18px;">${m.dept || '—'}</div>
+                    <div id="modalQRBox" style="width:200px;height:200px;margin:0 auto 18px;"></div>
+                    <p style="font-size:0.78rem;color:#aaa;margin-bottom:16px;">Member scans this QR at the entrance to mark attendance</p>
+                    <div style="display:flex;gap:10px;">
+                        <button id="dlQRBtn" style="flex:1;background:#1b5e20;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;">⬇ Download</button>
+                        <button onclick="this.closest('div[style]').remove()" style="flex:1;background:#eee;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;">Close</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+
+            // Generate QR
+            new QRCode(document.getElementById('modalQRBox'), {
+                text: payload, width: 200, height: 200,
+                colorDark: '#1b5e20', colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            // Download button
+            document.getElementById('dlQRBtn').onclick = () => {
+                const canvas = document.getElementById('modalQRBox').querySelector('canvas');
+                if (!canvas) return;
+                const a = document.createElement('a');
+                a.download = `ICGC_QR_${m.name.replace(/\s+/g,'_')}.png`;
+                a.href     = canvas.toDataURL('image/png');
+                a.click();
+            };
+
+            // Close on backdrop click
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        // ── Tithe Tracker per Member ──────────────────────────
+        function viewTithes(memberId, memberName) {
+            const txList = JSON.parse(localStorage.getItem('icgc_transactions') || '[]');
+            const tithes = txList.filter(t => !t.expense && t.category === 'Tithe'
+                && t.desc.toLowerCase().includes(memberName.toLowerCase()));
+
+            const total = tithes.reduce((s, t) => s + t.amount, 0);
+            const fmt   = n => 'GHS ' + n.toLocaleString('en-GH', {minimumFractionDigits:2});
+
+            const rows = tithes.length
+                ? tithes.map(t => `<tr><td style="padding:7px;border-bottom:1px solid #eee;">${t.date}</td>
+                    <td style="padding:7px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:bold;">+${fmt(t.amount)}</td></tr>`).join('')
+                : '<tr><td colspan="2" style="padding:14px;text-align:center;color:#999;">No tithe records found.<br><small>Tithe records matching this member\'s name will appear here.</small></td></tr>';
+
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;';
+            modal.innerHTML = `
+                <div style="background:var(--card-bg,white);border-radius:12px;padding:24px;width:400px;max-width:95%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+                    <h2 style="color:var(--dark-green,#1b5e20);margin-bottom:6px;font-size:1.1rem;">💰 Tithe History</h2>
+                    <p style="color:#999;font-size:0.85rem;margin-bottom:14px;">${memberName}</p>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead><tr>
+                            <th style="text-align:left;padding:7px;border-bottom:2px solid #e8f5e9;color:#1b5e20;">Date</th>
+                            <th style="text-align:left;padding:7px;border-bottom:2px solid #e8f5e9;color:#1b5e20;">Amount</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    ${tithes.length ? `<div style="margin-top:14px;padding:12px;background:#e8f5e9;border-radius:8px;font-weight:bold;color:#1b5e20;">Total: ${fmt(total)}</div>` : ''}
+                    <button onclick="this.closest('div[style]').remove()" style="margin-top:16px;width:100%;padding:10px;background:#eee;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">Close</button>
+                </div>`;
+            document.body.appendChild(modal);
         }
 
         // ── Init on page load ─────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
+            applyTheme();
+            applySettings();
             setAutoDate();
-            renderTable(loadMembers());
+            const members = loadMembers();
+            renderTable(members);
+            loadBirthdays();
         });
 
         // ── Modal state ──────────────────────────────────────
@@ -841,7 +1301,9 @@
             document.getElementById('saveBtn').textContent   = 'Save Member';
             document.getElementById('newName').value   = '';
             document.getElementById('newPhone').value  = '';
-            document.getElementById('newDept').value   = 'Choir';
+            document.getElementById('newDept').value   = '';
+            document.getElementById('newGender').value = 'male';
+            document.getElementById('newDOB').value    = '';
             document.getElementById('newStatus').value = 'active';
             document.getElementById('memberModal').classList.add('active');
         }
@@ -857,40 +1319,35 @@
             const members = getMembers();
             const m = members.find(x => x.id === editingId);
             if (!m) return;
-
             document.getElementById('modalTitle').textContent = 'Edit Member';
             document.getElementById('saveBtn').textContent   = 'Update Member';
             document.getElementById('newName').value   = m.name;
             document.getElementById('newPhone').value  = m.phone;
             document.getElementById('newDept').value   = m.dept;
+            document.getElementById('newGender').value = m.gender || 'male';
+            document.getElementById('newDOB').value    = m.dob || '';
             document.getElementById('newStatus').value = m.status;
             document.getElementById('memberModal').classList.add('active');
         }
 
-        // ── Save (Add or Edit) ────────────────────────────────
         function saveMember() {
             const name   = document.getElementById('newName').value.trim();
             const phone  = document.getElementById('newPhone').value.trim();
             const dept   = document.getElementById('newDept').value;
+            const gender = document.getElementById('newGender').value;
+            const dob    = document.getElementById('newDOB').value;
             const status = document.getElementById('newStatus').value;
-
-            if (!name || !phone) {
-                alert('Please fill in the name and phone number.');
-                return;
-            }
-
+            if (!name || !phone) { alert('Please fill in the name and phone number.'); return; }
             let members = getMembers();
-
             if (editingId) {
-                members = members.map(m =>
-                    m.id === editingId ? { ...m, name, phone, dept, status } : m
-                );
+                members = members.map(m => m.id === editingId ? { ...m, name, phone, dept, gender, dob, status } : m);
             } else {
-                members.push({ id: nextId(), name, phone, dept, status });
+                members.push({ id: nextId(), name, phone, dept, gender, dob, status });
             }
-
             saveMembers(members);
+            logActivity(editingId ? `✏️ Member updated: ${name}` : `👤 New member added: ${name}`, 'member');
             renderTable(members);
+            loadBirthdays();
             closeModal();
         }
 
@@ -907,6 +1364,7 @@
         function confirmDelete() {
             if (deletingId) {
                 const members = getMembers().filter(m => m.id !== deletingId);
+                logActivity(`🗑️ Member removed from directory`, "member");
                 saveMembers(members);
                 renderTable(members);
                 deletingId = null;
@@ -925,6 +1383,40 @@
                 row.style.display = row.innerText.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
             });
         }
+
+        // ── Dark Mode ─────────────────────────────────────────
+        function applyTheme() {
+            const t = localStorage.getItem('icgc_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+            const btn = document.getElementById('darkBtn');
+            if (btn) btn.textContent = t === 'dark' ? '☀ Light' : '🌙 Dark';
+        }
+        function toggleDark() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const next = isDark ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('icgc_theme', next);
+            const btn = document.getElementById('darkBtn');
+            if (btn) btn.textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
+        }
+
+        // ── Activity Logger ───────────────────────────────────
+        function logActivity(msg, type) {
+            const list = JSON.parse(localStorage.getItem('icgc_activity') || '[]');
+            list.push({ msg, type: type || 'member', ts: Date.now() });
+            if (list.length > 50) list.splice(0, list.length - 50);
+            localStorage.setItem('icgc_activity', JSON.stringify(list));
+        }
+
+        // ── Settings (church name in sidebar) ────────────────
+        function applySettings() {
+            const s = JSON.parse(localStorage.getItem('icgc_settings') || '{}');
+            const bn = document.getElementById('sidebarBranch');
+            const sn = document.getElementById('sidebarName');
+            if (bn && s.churchName) bn.textContent  = s.churchName;
+            if (sn && s.adminName)  sn.textContent  = s.adminName + ' Admin';
+        }
+
     </script>
 
 
