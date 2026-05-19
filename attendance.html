@@ -165,8 +165,8 @@
 
         /* --- Controls Bar --- */
         .controls-card {
-            background: var(--white);
-            padding: 20px 25px;
+            background: var(--white, #fff);
+            padding: 14px 16px;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             border-left: 5px solid var(--primary-green);
@@ -174,30 +174,36 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 12px;
         }
 
         .control-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
         }
 
         .control-group label {
             font-weight: 600;
             color: var(--dark-green);
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             white-space: nowrap;
         }
 
         .control-group select,
         .control-group input[type="date"] {
-            padding: 9px 12px;
-            border: 1px solid #ddd;
+            flex: 1;
+            min-width: 0;
+            padding: 8px 10px;
+            border: 1.5px solid #ccc;
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             outline: none;
+            background: #ffffff !important;
+            color: #222 !important;
             transition: border-color 0.2s;
             color: #333;
                     background-color: #ffffff !important;
@@ -785,7 +791,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -897,13 +903,14 @@
         <div id="panelMark">
 
         <!-- Controls Bar -->
+        <!-- Session Controls -->
         <div class="controls-card">
             <div class="control-group">
-                <label>Service Date:</label>
+                <label>Date:</label>
                 <input type="date" id="serviceDate">
             </div>
             <div class="control-group">
-                <label>Service Type:</label>
+                <label>Service:</label>
                 <select id="serviceType">
                     <option>Sunday Service</option>
                     <option>Tuesday Bible Studies</option>
@@ -911,49 +918,52 @@
                 </select>
             </div>
             <div class="present-counter">
-                Present: <span id="count">0</span> / <span id="total">0</span>
+                ✅ <span id="count">0</span> / <span id="total">0</span>
             </div>
         </div>
 
-        <!-- Filter + Search + Sync -->
-        <div class="action-bar" style="flex-wrap:wrap; gap:10px;">
-            <input type="text" class="search-input" placeholder="Search by name, group or gender..." oninput="filterTable(this.value)" style="flex:1; min-width:180px;">
-            <select id="filterGroup" onchange="filterTable(document.getElementById('filterSearch')?.value||'')" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:0.9rem;outline:none;">
+        <!-- Search Row -->
+        <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center;">
+            <input type="text" class="search-input"
+                id="attSearch"
+                placeholder="🔍 Search name or group..."
+                oninput="filterTable(this.value)"
+                style="flex:1; min-width:0; background:#fff !important; color:#222 !important; border:1.5px solid #ccc;">
+            <button class="add-btn" style="background:#1565c0; white-space:nowrap; padding:10px 14px;"
+                onclick="syncFromMembers()" title="Sync from Member Management">🔄</button>
+        </div>
+
+        <!-- Filter Row -->
+        <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+            <select id="filterGroup"
+                onchange="filterTable(document.getElementById('attSearch')?.value||'')"
+                style="flex:1; min-width:130px; padding:9px 10px; border:1.5px solid #ccc;
+                       border-radius:8px; font-size:0.85rem; background:#fff !important; color:#222 !important; outline:none;">
                 <option value="">All Groups</option>
-                <optgroup label="Men">
-                    <option>Mighty Men of Valor (MMV)</option>
-                </optgroup>
-                <optgroup label="Women">
-                    <option>Precious Vessels of Virtue (PVV)</option>
-                </optgroup>
-                <optgroup label="Youth">
-                    <option>Omega Generation</option>
-                    <option>New Breed</option>
-                </optgroup>
+                <optgroup label="Men"><option>Mighty Men of Valor (MMV)</option></optgroup>
+                <optgroup label="Women"><option>Precious Vessels of Virtue (PVV)</option></optgroup>
+                <optgroup label="Youth"><option>Omega Generation</option><option>New Breed</option></optgroup>
                 <optgroup label="Children">
                     <option>Children — Love Class (0–5 yrs)</option>
                     <option>Children — Joy Class (6–8 yrs)</option>
                     <option>Children — Peace Class (9–11 yrs)</option>
                 </optgroup>
                 <optgroup label="Ministry Teams">
-                    <option>Choir</option>
-                    <option>Ushering</option>
-                    <option>Media</option>
+                    <option>Choir</option><option>Ushering</option><option>Media</option>
                     <option>Intercessory Ministry</option>
-                    <option>Welfare Department</option>
-                    <option>Accounts Department</option>
+                    <option>Welfare Department</option><option>Accounts Department</option>
                 </optgroup>
-                <optgroup label="Other">
-                    <option>Visitor</option>
-                </optgroup>
+                <optgroup label="Other"><option>Visitor</option></optgroup>
             </select>
-            <select id="filterGender" onchange="filterTable(document.getElementById('filterSearch')?.value||'')" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:0.9rem;outline:none;">
+            <select id="filterGender"
+                onchange="filterTable(document.getElementById('attSearch')?.value||'')"
+                style="flex:1; min-width:110px; padding:9px 10px; border:1.5px solid #ccc;
+                       border-radius:8px; font-size:0.85rem; background:#fff !important; color:#222 !important; outline:none;">
                 <option value="">All Genders</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="child">Children</option>
+                <option value="male">👨 Male</option>
+                <option value="female">👩 Female</option>
+                <option value="child">🧒 Children</option>
             </select>
-            <button class="add-btn" style="background:#1565c0;" onclick="syncFromMembers()" title="Refresh member list from Member Management">🔄 Sync Members</button>
         </div>
 
         <!-- Attendance Table -->
@@ -1293,17 +1303,6 @@
             updateGenderBreakdown();
         }
 
-        // ── Sync from member management (re-render) ───────────
-        function syncFromMembers() {
-            renderRoll(
-                document.querySelector('.search-input')?.value || '',
-                document.getElementById('filterGroup')?.value  || '',
-                document.getElementById('filterGender')?.value || ''
-            );
-            const total = getMembers().length;
-            showToast(`🔄 Synced — ${total} member${total !== 1 ? 's' : ''} loaded from Member Directory.`);
-        }
-
         // ── Toggle present/absent ─────────────────────────────
         function updateRowStatus(checkbox) {
             const row   = checkbox.closest('tr');
@@ -1418,6 +1417,16 @@
             const group  = document.getElementById('filterGroup')?.value  || '';
             const gender = document.getElementById('filterGender')?.value || '';
             renderRoll(text, group, gender);
+        }
+
+        function syncFromMembers() {
+            renderRoll(
+                document.getElementById('attSearch')?.value       || '',
+                document.getElementById('filterGroup')?.value     || '',
+                document.getElementById('filterGender')?.value    || ''
+            );
+            const total = getMembers().length;
+            showToast(`🔄 Synced — ${total} member${total !== 1 ? 's' : ''} loaded.`);
         }
 
         // ── Attendance Streak ─────────────────────────────────
