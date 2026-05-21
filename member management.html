@@ -684,7 +684,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -823,7 +823,15 @@
 
     <!-- Visitor Records Panel -->
     <div id="panelVisitors" style="display:none;">
-        <h2 class="section-title">🙋 Visitor Records</h2>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+            <button onclick="switchDirTab('members')" style="
+                background:#f0f0f0; border:none; border-radius:8px;
+                padding:9px 16px; font-weight:700; font-size:0.88rem;
+                cursor:pointer; color:#333; display:flex; align-items:center; gap:6px;">
+                ← Back to Members
+            </button>
+            <h2 class="section-title" style="margin-bottom:0;">🙋 Visitor Records</h2>
+        </div>
         <p style="font-size:0.85rem;color:#888;margin-bottom:16px;">
             Visitors who scanned the QR code and filled the "Let's Get Acquainted" form appear here.
         </p>
@@ -1326,12 +1334,28 @@
 
         // ── Init on page load ─────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
+            // Theme and settings first
             applyTheme();
             applySettings();
             setAutoDate();
+
+            // Load members from localStorage and render everything
             const members = loadMembers();
-            renderTable(members);
+            renderTable(members);       // renders rows AND calls updateStatCards
+            updateStatCards(members);   // explicit second call — guarantees cards update
             loadBirthdays();
+        });
+
+        // ── Cross-tab / cross-page sync ───────────────────────
+        // If scanner.html or attendance.html writes to icgc_members,
+        // this page auto-refreshes its stats without needing a reload
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'icgc_members') {
+                const members = getMembers();
+                renderTable(members);
+                updateStatCards(members);
+                loadBirthdays();
+            }
         });
 
         // ── Modal state ──────────────────────────────────────
