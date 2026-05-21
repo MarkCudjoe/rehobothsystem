@@ -164,7 +164,7 @@
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <img src="ICGCNCT.png" alt="Logo">
+        <img src="ICGCNCT.PNG" alt="Logo">
         <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
     </div>
@@ -304,24 +304,50 @@
 
     // ── Stats ─────────────────────────────────────────────
     function loadStats() {
-        const members   = JSON.parse(localStorage.getItem('icgc_members')         || '[]');
-        const txList    = JSON.parse(localStorage.getItem('icgc_transactions')     || '[]');
-        const roll      = JSON.parse(localStorage.getItem('icgc_attendance_roll')  || '[]');
-        const inventory = JSON.parse(localStorage.getItem('icgc_inventory')        || '[]');
-        const now = new Date();
+        const members   = JSON.parse(localStorage.getItem('icgc_members')              || '[]');
+        const txList    = JSON.parse(localStorage.getItem('icgc_transactions')          || '[]');
+        const sessions  = JSON.parse(localStorage.getItem('icgc_attendance_sessions')  || '[]');
+        const inventory = JSON.parse(localStorage.getItem('icgc_inventory')             || '[]');
+        const now       = new Date();
 
+        // Total members
         document.getElementById('statMembers').textContent = members.length || '0';
 
+        // Tithes this month
         const tithes = txList
-            .filter(t => !t.expense && t.category === 'Tithe' && new Date(t.date).getMonth() === now.getMonth())
+            .filter(t => !t.expense && t.category === 'Tithe' &&
+                new Date(t.date).getMonth() === now.getMonth() &&
+                new Date(t.date).getFullYear() === now.getFullYear())
             .reduce((s, t) => s + t.amount, 0);
-        document.getElementById('statTithes').textContent = 'GHS ' + tithes.toLocaleString('en-GH',{minimumFractionDigits:2});
+        document.getElementById('statTithes').textContent =
+            'GHS ' + tithes.toLocaleString('en-GH', {minimumFractionDigits:2});
 
-        document.getElementById('statAttendance').textContent = roll.length ? roll.length + ' on Roll' : '0 on Roll';
+        // Attendance — show today's present count or roll size
+        const todayStr  = now.toISOString().slice(0,10);
+        const todaySess = sessions.find(s => s.date === todayStr);
+        const attText   = todaySess
+            ? todaySess.attendance.filter(a => a.present).length + ' Present Today'
+            : members.length + ' on Roll';
+        document.getElementById('statAttendance').textContent = attText;
 
-        const alerts = inventory.filter(a => a.condition === 'repair' || a.condition === 'missing').length;
-        document.getElementById('statAlerts').textContent = alerts ? alerts + (alerts===1?' Item':' Items') : 'None';
+        // Inventory alerts
+        const alerts = inventory.filter(a =>
+            a.condition === 'repair' || a.condition === 'missing' ||
+            (a.minQty && parseInt(a.qty) < parseInt(a.minQty))
+        ).length;
+        document.getElementById('statAlerts').textContent =
+            alerts ? alerts + (alerts === 1 ? ' Item' : ' Items') : 'None';
     }
+
+    // ── Auto-refresh dashboard when any page saves data ───
+    window.addEventListener('storage', (e) => {
+        const watched = ['icgc_members','icgc_transactions','icgc_inventory',
+                         'icgc_attendance_sessions','icgc_activity'];
+        if (watched.includes(e.key)) {
+            loadStats();
+            loadActivity();
+        }
+    });
 
     // ── Activity Feed ─────────────────────────────────────
     function loadActivity() {

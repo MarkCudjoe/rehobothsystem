@@ -667,7 +667,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -823,18 +823,12 @@
         // ── localStorage ─────────────────────────────────────
         const INV_KEY = 'icgc_inventory';
 
-        const SEED_ASSETS = [
-            { id: 1, name: 'Yamaha Digital Piano',  category: 'Instruments',  qty: '1',   condition: 'good',    date: '01 May 2026'   },
-            { id: 2, name: 'Behringer Audio Mixer', category: 'Sound System', qty: '1',   condition: 'repair',  date: '10 May 2026'   },
-            { id: 3, name: 'Plastic Chairs (White)',category: 'Furniture',    qty: '500', condition: 'good',    date: '15 April 2026' },
-            { id: 4, name: 'Wireless Microphones',  category: 'Electronics',  qty: '4',   condition: 'missing', date: '12 May 2026'   }
-        ];
-
         function loadAssets() {
+            // Always read from localStorage — no seed data
             const raw = localStorage.getItem(INV_KEY);
             if (raw) return JSON.parse(raw);
-            localStorage.setItem(INV_KEY, JSON.stringify(SEED_ASSETS));
-            return SEED_ASSETS;
+            localStorage.setItem(INV_KEY, JSON.stringify([]));
+            return [];
         }
 
         function getAssets() { return JSON.parse(localStorage.getItem(INV_KEY) || '[]'); }
@@ -858,14 +852,18 @@
             tbody.innerHTML = '';
 
             // Update stat cards
-            const total     = list.length;
+            const total       = list.length;
             const electronics = list.filter(a => a.category === 'Electronics').length;
             const furniture   = list.filter(a => a.category === 'Furniture').length;
             const needsRepair = list.filter(a => a.condition === 'repair' || a.condition === 'missing').length;
-            document.querySelector('.stats-grid .stat-card:nth-child(1) p').textContent = total;
-            document.querySelector('.stats-grid .stat-card:nth-child(2) p').textContent = electronics;
-            document.querySelector('.stats-grid .stat-card:nth-child(3) p').textContent = furniture;
-            document.querySelector('.stats-grid .stat-card:nth-child(4) p').textContent = needsRepair;
+            const stTotal = document.getElementById('statTotal');
+            const stElec  = document.getElementById('statElectronics');
+            const stFurn  = document.getElementById('statFurniture');
+            const stRep   = document.getElementById('statRepair');
+            if (stTotal) stTotal.textContent = total;
+            if (stElec)  stElec.textContent  = electronics;
+            if (stFurn)  stFurn.textContent  = furniture;
+            if (stRep)   stRep.textContent   = needsRepair;
 
             if (!list.length) {
                 tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:#999;">
@@ -913,6 +911,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+          try {
             applyTheme();
             applySettings();
             setAutoDate();
@@ -937,6 +936,17 @@
                     const hasIssue = row.querySelector('.tag-repair, .tag-missing');
                     row.style.display = hasIssue ? '' : 'none';
                 });
+            }
+          } catch(err) {
+                console.error('Inventory init error:', err);
+                setTimeout(() => { try { renderTable(); checkLowStock(); } catch(e){} }, 300);
+            }
+        });
+
+        // ── Cross-tab sync ────────────────────────────────────
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'icgc_inventory') {
+                try { renderTable(); checkLowStock(); } catch(err) {}
             }
         });
 

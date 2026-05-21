@@ -668,6 +668,7 @@
         /* Church branch subtitle in sidebar */
         .church-branch { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-top: 3px; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -684,7 +685,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -933,18 +934,12 @@
         const STORAGE_KEY = 'icgc_members';
 
         // Seed data shown on first load
-        const SEED_MEMBERS = [
-            { id: 'ICGC-001', name: 'Kofi Mensah',  phone: '024 123 4567', dept: 'Choir',          status: 'active',  gender: 'male'   },
-            { id: 'ICGC-002', name: 'Ama Serwaa',   phone: '055 987 6543', dept: 'Youth Ministry', status: 'active',  gender: 'female' },
-            { id: 'ICGC-003', name: 'John Doe',     phone: '020 444 5555', dept: 'Visitor',         status: 'visitor', gender: 'male'   }
-        ];
-
         function loadMembers() {
+            // Always read from localStorage — no seed data
             const raw = localStorage.getItem(STORAGE_KEY);
             if (raw) return JSON.parse(raw);
-            // First run — save seed data
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_MEMBERS));
-            return SEED_MEMBERS;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+            return [];
         }
 
         function saveMembers(members) {
@@ -1334,16 +1329,24 @@
 
         // ── Init on page load ─────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
-            // Theme and settings first
-            applyTheme();
-            applySettings();
-            setAutoDate();
-
-            // Load members from localStorage and render everything
-            const members = loadMembers();
-            renderTable(members);       // renders rows AND calls updateStatCards
-            updateStatCards(members);   // explicit second call — guarantees cards update
-            loadBirthdays();
+            try {
+                applyTheme();
+                applySettings();
+                setAutoDate();
+                const members = loadMembers();
+                renderTable(members);
+                updateStatCards(members);
+                loadBirthdays();
+            } catch(err) {
+                console.error('Init error:', err);
+                // Retry stat cards after a short delay as fallback
+                setTimeout(() => {
+                    try {
+                        const m = getMembers();
+                        updateStatCards(m);
+                    } catch(e) {}
+                }, 200);
+            }
         });
 
         // ── Cross-tab / cross-page sync ───────────────────────
@@ -1351,10 +1354,12 @@
         // this page auto-refreshes its stats without needing a reload
         window.addEventListener('storage', (e) => {
             if (e.key === 'icgc_members') {
-                const members = getMembers();
-                renderTable(members);
-                updateStatCards(members);
-                loadBirthdays();
+                try {
+                    const members = getMembers();
+                    renderTable(members);
+                    updateStatCards(members);
+                    loadBirthdays();
+                } catch(err) { console.error('Storage sync error:', err); }
             }
         });
 

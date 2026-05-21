@@ -747,7 +747,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -789,19 +789,19 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>Total Revenue</h3>
-                <p id="cardRevenue">GHS 125,400.00</p>
+                <p id="cardRevenue">GHS 0.00</p>
             </div>
             <div class="stat-card">
                 <h3>Tithes This Month</h3>
-                <p id="cardTithes">GHS 12,250.00</p>
+                <p id="cardTithes">GHS 0.00</p>
             </div>
             <div class="stat-card">
                 <h3>Expenses</h3>
-                <p class="expense" id="cardExpenses">GHS 4,500.00</p>
+                <p class="expense" id="cardExpenses">GHS 0.00</p>
             </div>
             <div class="stat-card">
                 <h3>Net Balance</h3>
-                <p id="cardBalance">GHS 120,900.00</p>
+                <p id="cardBalance">GHS 0.00</p>
             </div>
         </div>
 
@@ -999,19 +999,12 @@
         // ── localStorage helpers ──────────────────────────────
         const TX_KEY = 'icgc_transactions';
 
-        const SEED_TX = [
-            { id: 1, date: 'May 10, 2026', category: 'Tithe',          desc: 'Kofi Mensah',     amount: 500.00,  expense: false },
-            { id: 2, date: 'May 10, 2026', category: 'Expense / Payout', desc: 'Electricity Bill', amount: 1200.00, expense: true  },
-            { id: 3, date: 'May 08, 2026', category: 'Building Fund',   desc: 'Special Seed',    amount: 2500.00, expense: false },
-            { id: 4, date: 'May 04, 2026', category: 'Main Offering',   desc: 'Sunday Service',  amount: 3100.00, expense: false },
-            { id: 5, date: 'May 01, 2026', category: 'Welfare',         desc: 'Benevolence Fund',amount: 800.00,  expense: true  }
-        ];
-
         function loadTx() {
+            // Always read from localStorage — no seed data to avoid confusion
             const raw = localStorage.getItem(TX_KEY);
             if (raw) return JSON.parse(raw);
-            localStorage.setItem(TX_KEY, JSON.stringify(SEED_TX));
-            return SEED_TX;
+            localStorage.setItem(TX_KEY, JSON.stringify([]));
+            return [];
         }
 
         function saveTx(list) {
@@ -1149,7 +1142,27 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            setAutoDate(); loadTx(); renderAll(); });
+            try {
+                applyTheme();
+                applySettings();
+                setAutoDate();
+                loadTx();
+                renderAll();
+            } catch(err) {
+                console.error('Finance init error:', err);
+                // Fallback — try again after DOM settles
+                setTimeout(() => {
+                    try { renderAll(); } catch(e) { console.error(e); }
+                }, 300);
+            }
+        });
+
+        // ── Cross-tab sync ────────────────────────────────────
+        window.addEventListener('storage', (e) => {
+            if (e.key === TX_KEY) {
+                try { renderAll(); } catch(err) {}
+            }
+        });
 
         // ── Save Transaction ──────────────────────────────────
         function saveTransaction() {
