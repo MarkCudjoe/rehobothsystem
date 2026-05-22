@@ -667,7 +667,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -702,19 +702,19 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>Total Assets</h3>
-                <p>142</p>
+                <p id="statTotal">0</p>
             </div>
             <div class="stat-card">
                 <h3>Electronics</h3>
-                <p>28</p>
+                <p id="statElectronics">0</p>
             </div>
             <div class="stat-card">
                 <h3>Furniture</h3>
-                <p>95</p>
+                <p id="statFurniture">0</p>
             </div>
             <div class="stat-card warning">
                 <h3>Needs Repair</h3>
-                <p>5</p>
+                <p id="statRepair">0</p>
             </div>
         </div>
 
@@ -823,12 +823,29 @@
         // ── localStorage ─────────────────────────────────────
         const INV_KEY = 'icgc_inventory';
 
+        // Old seed asset names to detect and clear stale data
+        const SEED_NAMES = ['Yamaha Digital Piano','Behringer Audio Mixer','Plastic Chairs (White)','Wireless Microphones'];
+
         function loadAssets() {
-            // Always read from localStorage — no seed data
             const raw = localStorage.getItem(INV_KEY);
-            if (raw) return JSON.parse(raw);
-            localStorage.setItem(INV_KEY, JSON.stringify([]));
-            return [];
+            if (!raw) {
+                localStorage.setItem(INV_KEY, JSON.stringify([]));
+                return [];
+            }
+            let list = JSON.parse(raw);
+            // If list contains ONLY seed items (user hasn't added anything real), clear it
+            const allSeed = list.length > 0 && list.every(a => SEED_NAMES.includes(a.name));
+            if (allSeed) {
+                localStorage.setItem(INV_KEY, JSON.stringify([]));
+                return [];
+            }
+            // Remove individual seed items mixed in with real data
+            const cleaned = list.filter(a => !SEED_NAMES.includes(a.name));
+            if (cleaned.length !== list.length) {
+                localStorage.setItem(INV_KEY, JSON.stringify(cleaned));
+                return cleaned;
+            }
+            return list;
         }
 
         function getAssets() { return JSON.parse(localStorage.getItem(INV_KEY) || '[]'); }

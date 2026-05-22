@@ -685,7 +685,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -934,12 +934,29 @@
         const STORAGE_KEY = 'icgc_members';
 
         // Seed data shown on first load
+        // Old seed member names to detect and clear stale data
+        const SEED_MEMBER_NAMES = ['Kofi Mensah','Ama Serwaa','John Doe'];
+
         function loadMembers() {
-            // Always read from localStorage — no seed data
             const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) return JSON.parse(raw);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-            return [];
+            if (!raw) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+                return [];
+            }
+            let list = JSON.parse(raw);
+            // If ALL items are seed data, clear them
+            const allSeed = list.length > 0 && list.every(m => SEED_MEMBER_NAMES.includes(m.name));
+            if (allSeed) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+                return [];
+            }
+            // Remove seed items mixed with real data
+            const cleaned = list.filter(m => !SEED_MEMBER_NAMES.includes(m.name));
+            if (cleaned.length !== list.length) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+                return cleaned;
+            }
+            return list;
         }
 
         function saveMembers(members) {

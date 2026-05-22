@@ -747,7 +747,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -999,12 +999,29 @@
         // ── localStorage helpers ──────────────────────────────
         const TX_KEY = 'icgc_transactions';
 
+        // Old seed descriptions to detect stale data
+        const SEED_DESCS = ['Kofi Mensah','Electricity Bill','Special Seed','Sunday Service','Benevolence Fund'];
+
         function loadTx() {
-            // Always read from localStorage — no seed data to avoid confusion
             const raw = localStorage.getItem(TX_KEY);
-            if (raw) return JSON.parse(raw);
-            localStorage.setItem(TX_KEY, JSON.stringify([]));
-            return [];
+            if (!raw) {
+                localStorage.setItem(TX_KEY, JSON.stringify([]));
+                return [];
+            }
+            let list = JSON.parse(raw);
+            // If ALL items are seed data, clear them
+            const allSeed = list.length > 0 && list.every(t => SEED_DESCS.includes(t.desc));
+            if (allSeed) {
+                localStorage.setItem(TX_KEY, JSON.stringify([]));
+                return [];
+            }
+            // Remove individual seed items mixed with real data
+            const cleaned = list.filter(t => !SEED_DESCS.includes(t.desc));
+            if (cleaned.length !== list.length) {
+                localStorage.setItem(TX_KEY, JSON.stringify(cleaned));
+                return cleaned;
+            }
+            return list;
         }
 
         function saveTx(list) {
