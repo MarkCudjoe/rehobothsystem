@@ -3,84 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ICGC - Management System Login</title>
+    <title>ICGC — Management System</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Arial, sans-serif;
-        }
-
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Arial,sans-serif; }
         body {
             background: linear-gradient(135deg, #f1f8e9 0%, #c8e6c9 100%);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
 
-        .login-card {
-            background-color: #ffffff;
-            padding: 35px;
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        .card {
+            background: #fff;
+            padding: 36px 32px;
+            border-radius: 16px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
             width: 100%;
-            max-width: 380px;
+            max-width: 400px;
             text-align: center;
         }
 
         .logo {
-            width: 120px;
+            width: 80px;
             height: auto;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
         }
 
-        .login-card h2 {
+        .card h2 {
             color: #1b5e20;
-            font-size: 1.5rem;
-            margin-bottom: 8px;
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+        }
+        .card .subtitle {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
         }
 
-        .login-card p {
-            color: #666;
-            font-size: 0.85rem;
-            margin-bottom: 25px;
+        /* Tab switcher */
+        .tabs {
+            display: flex;
+            background: #f4f7f6;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 22px;
+            gap: 4px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 9px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+            background: transparent;
+            color: #888;
+            transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: #2e7d32;
+            color: white;
         }
 
         .form-group {
             text-align: left;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
         }
-
         .form-group label {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
             color: #2e7d32;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
         }
-
         .form-group input {
             width: 100%;
-            padding: 10px 12px;
-            border: 1.5px solid #e0e0e0;
-            border-radius: 8px;
+            padding: 11px 13px;
+            border: 1.5px solid #ddd;
+            border-radius: 9px;
             outline: none;
-            transition: all 0.3s ease;
             font-size: 0.95rem;
+            transition: border-color 0.2s;
+            background: #fff;
+            color: #222;
         }
+        .form-group input:focus { border-color: #2e7d32; }
 
-        .form-group input:focus {
-            border-color: #4caf50;
-            box-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
+        .submit-btn {
+            width: 100%;
+            padding: 13px;
+            background: #2e7d32;
+            border: none;
+            border-radius: 9px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 4px;
         }
-
-        /* Error state */
-        .form-group input.error {
-            border-color: #d32f2f;
-            box-shadow: 0 0 5px rgba(211, 47, 47, 0.2);
-        }
+        .submit-btn:hover { background: #1b5e20; }
+        .submit-btn:disabled { background: #aaa; cursor:not-allowed; }
 
         .error-msg {
             display: none;
@@ -91,129 +117,271 @@
             padding: 10px 14px;
             font-size: 0.85rem;
             font-weight: 600;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             text-align: left;
         }
-
         .error-msg.show { display: block; }
 
-        .login-btn {
-            width: 100%;
-            padding: 12px;
-            background-color: #2e7d32;
-            border: none;
+        .success-msg {
+            display: none;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
             border-radius: 8px;
-            color: white;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s ease;
-            margin-top: 10px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+            text-align: left;
         }
+        .success-msg.show { display: block; }
 
-        .login-btn:hover { background-color: #1b5e20; }
-
-        /* Shake animation on wrong credentials */
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%       { transform: translateX(-8px); }
-            40%       { transform: translateX(8px); }
-            60%       { transform: translateX(-6px); }
-            80%       { transform: translateX(6px); }
+        .spinner {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .shake { animation: shake 0.4s ease; }
-
-        .footer-links {
-            margin-top: 20px;
-            font-size: 0.8rem;
+        .admin-note {
+            margin-top: 18px;
+            font-size: 0.75rem;
+            color: #bbb;
         }
-
-        .footer-links a {
-            color: #4caf50;
-            text-decoration: none;
-        }
-
-        .footer-links a:hover { text-decoration: underline; }
 
         @media (max-width: 480px) {
-            .login-card {
-                padding: 24px 18px;
-                margin: 0 12px;
-                border-radius: 12px;
-            }
-            .logo { width: 90px; }
-            .login-card h2 { font-size: 1.25rem; }
-            .login-btn { font-size: 0.95rem; }
+            .card { padding: 24px 18px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="login-card" id="loginCard">
-        <img src="ICGCNCT.png" alt="ICGC Logo" class="logo">
+<div class="card">
+    <img src="ICGCNCT.PNG" alt="ICGC Logo" class="logo">
+    <h2>ICGC Rehoboth</h2>
+    <p class="subtitle">Church Management System</p>
 
-        <h2>Rehoboth Temple System Management</h2>
-        <p>Log in with your account credentials</p>
-
-        <div class="error-msg" id="errorMsg">
-            ❌ Incorrect username or password. Please try again.
-        </div>
-
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" placeholder="Enter username" autocomplete="username">
-        </div>
-
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" placeholder="Enter password" autocomplete="current-password">
-        </div>
-
-        <button class="login-btn" onclick="handleLogin()">Login</button>
-
-        <div class="footer-links">
-            <a href="#">Forgot password?</a>
-        </div>
+    <!-- Tab switcher -->
+    <div class="tabs">
+        <button class="tab-btn active" id="tabLogin"  onclick="switchTab('login')">Login</button>
+        <button class="tab-btn"        id="tabSignup" onclick="switchTab('signup')">Create Account</button>
     </div>
 
-    <script>
-        // Allow pressing Enter to trigger login
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') handleLogin();
-        });
+    <!-- Error / Success -->
+    <div class="error-msg"   id="errorMsg"></div>
+    <div class="success-msg" id="successMsg"></div>
 
-        function handleLogin() {
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value.trim();
-            const errorMsg = document.getElementById('errorMsg');
-            const card     = document.getElementById('loginCard');
-            const userInput = document.getElementById('username');
-            const passInput = document.getElementById('password');
+    <!-- ── LOGIN FORM ── -->
+    <div id="loginForm">
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPass" placeholder="Enter password" autocomplete="current-password">
+        </div>
+        <button class="submit-btn" id="loginBtn" onclick="handleLogin()">Login</button>
+    </div>
 
-            // Clear previous error state
-            errorMsg.classList.remove('show');
-            userInput.classList.remove('error');
-            passInput.classList.remove('error');
+    <!-- ── SIGNUP FORM ── -->
+    <div id="signupForm" style="display:none;">
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="signupName" placeholder="e.g. Ama Owusu" autocapitalize="words">
+        </div>
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="signupEmail" placeholder="your@email.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+            <label>Password <span style="color:#999;font-size:0.78rem;">(min. 6 characters)</span></label>
+            <input type="password" id="signupPass" placeholder="Choose a strong password">
+        </div>
+        <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="signupPass2" placeholder="Repeat password">
+        </div>
+        <button class="submit-btn" id="signupBtn" onclick="handleSignup()">Create Account</button>
+    </div>
 
-            if (username === 'admin' && password === 'admin') {
-                // Correct — redirect to dashboard
-                window.location.href = 'h2.html';
-            } else {
-                // Wrong — show error and shake the card
-                errorMsg.classList.add('show');
-                userInput.classList.add('error');
-                passInput.classList.add('error');
+    <p class="admin-note">ICGC Rehoboth Temple &nbsp;·&nbsp; Admin System</p>
+</div>
 
-                card.classList.remove('shake');
-                void card.offsetWidth; // force reflow for re-trigger
-                card.classList.add('shake');
+<script>
+    const SUPABASE_URL = 'https://negrfzkejqfmswxnfiyk.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8';
 
-                // Clear the password field only
-                document.getElementById('password').value = '';
-            }
+    // ── Super Admin credentials (local bypass) ────────────
+    const SUPER_EMAIL = 'markcudjoe@admin.icgc';
+    const SUPER_PASS  = 'Rehoboth@SuperAdmin2026';
+
+    // ── Check if already logged in ────────────────────────
+    window.addEventListener('DOMContentLoaded', () => {
+        const session = localStorage.getItem('icgc_session');
+        if (session) {
+            try {
+                const s = JSON.parse(session);
+                if (s.expires_at > Date.now()) {
+                    window.location.href = 'h2.html';
+                } else {
+                    localStorage.removeItem('icgc_session');
+                }
+            } catch(e) { localStorage.removeItem('icgc_session'); }
         }
-    </script>
+    });
 
+    // ── Tab switching ─────────────────────────────────────
+    function switchTab(tab) {
+        document.getElementById('loginForm').style.display  = tab==='login'  ? '' : 'none';
+        document.getElementById('signupForm').style.display = tab==='signup' ? '' : 'none';
+        document.getElementById('tabLogin').classList.toggle('active',  tab==='login');
+        document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
+        clearMessages();
+    }
+
+    function clearMessages() {
+        document.getElementById('errorMsg').classList.remove('show');
+        document.getElementById('successMsg').classList.remove('show');
+    }
+    function showError(msg) {
+        const el = document.getElementById('errorMsg');
+        el.textContent = '❌ ' + msg;
+        el.classList.add('show');
+        document.getElementById('successMsg').classList.remove('show');
+    }
+    function showSuccess(msg) {
+        const el = document.getElementById('successMsg');
+        el.textContent = '✅ ' + msg;
+        el.classList.add('show');
+        document.getElementById('errorMsg').classList.remove('show');
+    }
+    function setLoading(btnId, on) {
+        const btn = document.getElementById(btnId);
+        btn.disabled = on;
+        btn.innerHTML = on ? '<span class="spinner"></span> Please wait...' : btn.dataset.label;
+    }
+
+    // ── LOGIN ─────────────────────────────────────────────
+    async function handleLogin() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const pass  = document.getElementById('loginPass').value;
+        if (!email || !pass) { showError('Please enter your email and password.'); return; }
+
+        const btn = document.getElementById('loginBtn');
+        btn.dataset.label = 'Login';
+        setLoading('loginBtn', true);
+        clearMessages();
+
+        // Super admin local bypass
+        if (email === SUPER_EMAIL && pass === SUPER_PASS) {
+            localStorage.setItem('icgc_session', JSON.stringify({
+                user: { email: SUPER_EMAIL, name: 'Super Admin', role: 'superadmin' },
+                expires_at: Date.now() + (24 * 60 * 60 * 1000)
+            }));
+            window.location.href = 'h2.html';
+            return;
+        }
+
+        // Supabase auth for staff
+        try {
+            const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password: pass })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                let msg = data.error_description || data.msg || 'Invalid email or password.';
+                if (msg.toLowerCase().includes('email not confirmed') || msg.toLowerCase().includes('confirm')) {
+                    msg = 'Please confirm your email first — check your inbox for the confirmation link.';
+                }
+                showError(msg);
+                setLoading('loginBtn', false);
+                return;
+            }
+
+            // Save session
+            localStorage.setItem('icgc_session', JSON.stringify({
+                user: { email: data.user.email, name: data.user.user_metadata?.name || email, role: 'staff' },
+                access_token: data.access_token,
+                expires_at: Date.now() + (data.expires_in * 1000)
+            }));
+
+            window.location.href = 'h2.html';
+        } catch(err) {
+            showError('Network error. Please check your connection.');
+            setLoading('loginBtn', false);
+        }
+    }
+
+    // ── SIGNUP ────────────────────────────────────────────
+    async function handleSignup() {
+        const name   = document.getElementById('signupName').value.trim();
+        const email  = document.getElementById('signupEmail').value.trim();
+        const pass   = document.getElementById('signupPass').value;
+        const pass2  = document.getElementById('signupPass2').value;
+
+        if (!name)              { showError('Please enter your full name.'); return; }
+        if (!email)             { showError('Please enter your email address.'); return; }
+        if (pass.length < 6)    { showError('Password must be at least 6 characters.'); return; }
+        if (pass !== pass2)     { showError('Passwords do not match.'); return; }
+        if (email === SUPER_EMAIL) { showError('This email is reserved.'); return; }
+
+        const btn = document.getElementById('signupBtn');
+        btn.dataset.label = 'Create Account';
+        setLoading('signupBtn', true);
+        clearMessages();
+
+        try {
+            const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email, password: pass,
+                    data: { name }
+                })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                showError(data.error_description || data.msg || 'Could not create account.');
+                setLoading('signupBtn', false);
+                return;
+            }
+
+            // Show check email message instead of auto-login
+            document.getElementById('signupForm').style.display = 'none';
+            document.getElementById('tabSignup').style.display  = 'none';
+            document.getElementById('tabLogin').style.display   = 'none';
+            showSuccess(`✅ Account created! A confirmation email has been sent to ${email}. Please check your inbox and click the link to activate your account, then come back to log in.`);
+            setTimeout(() => switchTab('login'), 5000);
+
+        } catch(err) {
+            showError('Network error. Please check your connection.');
+            setLoading('signupBtn', false);
+        }
+    }
+
+    // Allow Enter key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            if (document.getElementById('signupForm').style.display === 'none') handleLogin();
+            else handleSignup();
+        }
+    });
+</script>
 </body>
 </html>
