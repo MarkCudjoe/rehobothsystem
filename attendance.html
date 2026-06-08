@@ -129,7 +129,28 @@
     </style>
 </head>
 <body>
-
+<script>
+    (function() {
+        const session = localStorage.getItem('icgc_session');
+        if (!session) { window.location.href = 'l1.html'; return; }
+        try {
+            const s = JSON.parse(session);
+            if (s.expires_at < Date.now()) {
+                localStorage.removeItem('icgc_session');
+                window.location.href = 'l1.html';
+            }
+            window.addEventListener('DOMContentLoaded', () => {
+                const nameEl = document.getElementById('sidebarName');
+                if (nameEl && s.user?.name) nameEl.textContent = s.user.name;
+                const roleEl = document.getElementById('sidebarBranch');
+                if (roleEl) roleEl.textContent = s.user?.role === 'superadmin' ? '👑 Super Admin' : '👤 Staff';
+            });
+        } catch(e) {
+            localStorage.removeItem('icgc_session');
+            window.location.href = 'l1.html';
+        }
+    })();
+</script>
 <div id="overlay" onclick="toggleSidebar()"></div>
 
 <!-- Top Bar -->
@@ -143,7 +164,7 @@
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <img src="ICGCNCT.png" alt="Logo">
+        <img src="ICGCNCT.PNG" alt="Logo">
         <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
     </div>
@@ -329,15 +350,40 @@
 </div>
 
 <script>
-    // ── Storage ───────────────────────────────────────────────
-    const MEMBERS_KEY  = 'icgc_members';
-    const SESSION_KEY  = 'icgc_attendance_sessions';
-    const HIST_KEY     = 'icgc_attendance_lastSeen';
+    // ── Supabase ──────────────────────────────────────────────
+    const SUPABASE_URL = 'https://negrfzkejqfmswxnfiyk.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8';
 
-    function getMembers()  { return JSON.parse(localStorage.getItem(MEMBERS_KEY)  || '[]'); }
-    function getSessions() { return JSON.parse(localStorage.getItem(SESSION_KEY)  || '[]'); }
-    function getHistory()  { return JSON.parse(localStorage.getItem(HIST_KEY)     || '{}'); }
-    function saveHistory(h){ localStorage.setItem(HIST_KEY, JSON.stringify(h)); }
+    async function sbFetch(path, method='GET', body=null, extra='') {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${extra}`, {
+            method,
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': method==='POST' ? 'return=representation' : ''
+            },
+            body: body ? JSON.stringify(body) : null
+        });
+        if (!res.ok) { const e = await res.text(); throw new Error(e); }
+        const t = await res.text(); return t ? JSON.parse(t) : [];
+    }
+
+    async function getMembers()  { return await sbFetch('members?order=created_at.asc'); }
+    async function getSessions() { return await sbFetch('attendance_sessions?order=submitted_at.desc'); }
+    async function getLastSeen() {
+        const rows = await sbFetch('attendance_last_seen');
+        const map = {}; rows.forEach(r => map[r.member_id] = r.last_date); return map;
+    }
+    async function upsertLastSeen(id, dateStr) {
+        await sbFetch('attendance_last_seen','POST',
+            {member_id:id, last_date:dateStr},'?on_conflict=member_id');
+    }
+    async function saveSessionToDB(date, service, attendance) {
+        await sbFetch('attendance_sessions','POST',{
+            session_date: date, service, attendance, from_scanner: false
+        });
+    }
 
     const genderLabel = { male:'👨 Male', female:'👩 Female', child:'🧒 Child', '':'—' };
     const genderColor = { male:'#1565c0', female:'#c2185b', child:'#e65100' };
@@ -348,7 +394,6 @@
         document.getElementById('overlay').classList.toggle('active');
     }
 
-    // ── Gender Toggle ─────────────────────────────────────────
     function toggleGender() {
         const body = document.getElementById('genderBreakdownBody');
         const icon = document.getElementById('genderToggleIcon');
@@ -357,84 +402,82 @@
         icon.textContent   = show ? '▲ Hide' : '▼ Show';
     }
 
-    // ── Tab Switching ─────────────────────────────────────────
     function switchTab(tab) {
-        ['panelMark','panelHistory'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-        const panel = document.getElementById(tab === 'mark' ? 'panelMark' : 'panelHistory');
-        if (panel) panel.style.display = '';
-
-        const markBtn    = document.getElementById('tabMarkBtn');
-        const historyBtn = document.getElementById('tabHistoryBtn');
-        if (tab === 'mark') {
-            markBtn.style.background    = '#2e7d32'; markBtn.style.color    = 'white'; markBtn.style.border    = 'none';
-            historyBtn.style.background = 'white';   historyBtn.style.color = '#2e7d32'; historyBtn.style.border = '2px solid #2e7d32';
+        document.getElementById('panelMark').style.display    = tab==='mark' ? '' : 'none';
+        document.getElementById('panelHistory').style.display = tab==='history' ? '' : 'none';
+        const mb = document.getElementById('tabMarkBtn');
+        const hb = document.getElementById('tabHistoryBtn');
+        if (tab==='mark') {
+            mb.style.cssText='background:#2e7d32;color:white;border:none;';
+            hb.style.cssText='background:white;color:#2e7d32;border:2px solid #2e7d32;';
         } else {
-            historyBtn.style.background = '#2e7d32'; historyBtn.style.color = 'white'; historyBtn.style.border = 'none';
-            markBtn.style.background    = 'white';   markBtn.style.color    = '#2e7d32'; markBtn.style.border   = '2px solid #2e7d32';
+            hb.style.cssText='background:#2e7d32;color:white;border:none;';
+            mb.style.cssText='background:white;color:#2e7d32;border:2px solid #2e7d32;';
             renderHistory();
         }
     }
 
     // ── Render Roll ───────────────────────────────────────────
-    function renderRoll(filterText, filterGroup, filterGender) {
-        const members = getMembers();
-        const history = getHistory();
-        const tbody   = document.getElementById('attendanceBody');
-        tbody.innerHTML = '';
+    async function renderRoll(filterText, filterGroup, filterGender) {
+        const tbody = document.getElementById('attendanceBody');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#aaa;">⏳ Loading members...</td></tr>';
+        try {
+            const [members, history] = await Promise.all([getMembers(), getLastSeen()]);
+            tbody.innerHTML = '';
+            const ft = (filterText  || '').toLowerCase();
+            const fg =  filterGroup  || '';
+            const gg =  filterGender || '';
 
-        const ft = (filterText   || '').toLowerCase();
-        const fg = (filterGroup  || '');
-        const gg = (filterGender || '');
+            const filtered = members.filter(m => {
+                const mt = !ft || m.name.toLowerCase().includes(ft) || (m.dept||'').toLowerCase().includes(ft);
+                const mg = !fg || m.dept === fg;
+                const gg2= !gg || m.gender === gg;
+                return mt && mg && gg2;
+            });
 
-        const filtered = members.filter(m => {
-            const matchText   = !ft || m.name.toLowerCase().includes(ft) || (m.dept||'').toLowerCase().includes(ft);
-            const matchGroup  = !fg || m.dept === fg;
-            const matchGender = !gg || m.gender === gg;
-            return matchText && matchGroup && matchGender;
-        });
+            if (!filtered.length) {
+                tbody.innerHTML = members.length === 0
+                    ? `<tr><td colspan="6" style="text-align:center;padding:36px;color:#999;">👥 No members yet. <a href="member management.html" style="color:#2e7d32;font-weight:bold;">Go to Member Management</a></td></tr>`
+                    : `<tr><td colspan="6" style="text-align:center;padding:36px;color:#999;">🔍 No members match your filter.</td></tr>`;
+                updateCount(members.length, 0, 0);
+                return;
+            }
 
-        if (!filtered.length) {
-            const msg = members.length === 0
-                ? '👥 No members yet. <a href="member management.html" style="color:#2e7d32;font-weight:bold;">Go to Member Management</a> to add members.'
-                : '🔍 No members match your filter.';
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:36px;color:#999;">${msg}</td></tr>`;
-            updateCount(); return;
+            const sessions = await getSessions();
+            filtered.forEach(member => {
+                const lastSeen    = history[member.id] || 'Never';
+                const streak      = getStreak(member.id, sessions);
+                const streakBadge = streak > 0
+                    ? `<span style="background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:8px;font-size:0.7rem;font-weight:bold;margin-left:4px;">🔥${streak}</span>`
+                    : '';
+                const gl = genderLabel[member.gender || ''] || '—';
+                const gc = genderColor[member.gender]       || '#777';
+
+                const row = document.createElement('tr');
+                row.dataset.id     = member.id;
+                row.dataset.name   = member.name;
+                row.dataset.dept   = member.dept   || '';
+                row.dataset.gender = member.gender || '';
+                row.style.background = '#fff8f8';
+                row.innerHTML = `
+                    <td><span style="font-weight:600;font-size:0.88rem;">${member.name}</span>${streakBadge}</td>
+                    <td style="font-size:0.78rem;color:#666;">${member.dept || '—'}</td>
+                    <td style="font-size:0.78rem;color:${gc};font-weight:600;">${gl}</td>
+                    <td style="font-size:0.75rem;color:#888;">${lastSeen}</td>
+                    <td><label class="switch"><input type="checkbox" onchange="updateRowStatus(this)"><span class="slider"></span></label></td>
+                    <td><span class="badge badge-absent" id="badge-${member.id}">❌ Absent</span></td>`;
+                tbody.appendChild(row);
+            });
+
+            updateCount(members.length, 0, filtered.length);
+            updateGenderBreakdown();
+            updateAvg(sessions);
+        } catch(err) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:#c62828;">❌ Error loading members: ${err.message}</td></tr>`;
+            console.error(err);
         }
-
-        filtered.forEach(member => {
-            const lastSeen    = history[member.id] || 'Never';
-            const streak      = getStreak(member.id);
-            const streakBadge = streak > 0
-                ? `<span style="background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:8px;font-size:0.7rem;font-weight:bold;margin-left:4px;" title="${streak} consecutive">🔥${streak}</span>`
-                : '';
-            const gl = genderLabel[member.gender || ''] || '—';
-            const gc = genderColor[member.gender]       || '#777';
-
-            const row = document.createElement('tr');
-            row.dataset.id     = member.id;
-            row.dataset.name   = member.name;
-            row.dataset.dept   = member.dept   || '';
-            row.dataset.gender = member.gender || '';
-            row.style.background = '#fff8f8';
-
-            row.innerHTML = `
-                <td><span style="font-weight:600;font-size:0.88rem;">${member.name}</span>${streakBadge}</td>
-                <td style="font-size:0.78rem;color:#666;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${member.dept || '—'}</td>
-                <td style="font-size:0.78rem;color:${gc};font-weight:600;">${gl}</td>
-                <td style="font-size:0.75rem;color:#888;">${lastSeen}</td>
-                <td><label class="switch"><input type="checkbox" onchange="updateRowStatus(this)"><span class="slider"></span></label></td>
-                <td><span class="badge badge-absent" id="badge-${member.id}">❌ Absent</span></td>`;
-            tbody.appendChild(row);
-        });
-
-        updateCount();
-        updateGenderBreakdown();
     }
 
-    // ── Row Status Toggle ─────────────────────────────────────
     function updateRowStatus(checkbox) {
         const row   = checkbox.closest('tr');
         const id    = row.dataset.id;
@@ -443,226 +486,205 @@
             badge.textContent = '✅ Present'; badge.className = 'badge badge-present';
             row.style.background = '#f9fff9';
         } else {
-            badge.textContent = '❌ Absent';  badge.className = 'badge badge-absent';
+            badge.textContent = '❌ Absent'; badge.className = 'badge badge-absent';
             row.style.background = '#fff8f8';
         }
-        updateCount();
+        const checkboxes = document.querySelectorAll('#attendanceBody input[type="checkbox"]');
+        const present    = [...checkboxes].filter(c => c.checked).length;
+        const shown      = document.querySelectorAll('#attendanceBody tr[data-id]').length;
+        document.getElementById('count').textContent       = present;
+        document.getElementById('presentCard').textContent = present;
+        document.getElementById('absentCard').textContent  = shown - present;
+        updateGenderBreakdown();
     }
 
-    // ── Counters ──────────────────────────────────────────────
-    function updateCount() {
-        const rows      = document.querySelectorAll('#attendanceBody tr[data-id]');
-        const checkboxes = document.querySelectorAll('#attendanceBody input[type="checkbox"]');
-        const present   = [...checkboxes].filter(c => c.checked).length;
-        const total     = getMembers().length;
-        const shown     = rows.length;
+    function updateCount(total, present, shown) {
+        document.getElementById('totalMembersCard').textContent = total || 0;
+        document.getElementById('count').textContent            = present || 0;
+        document.getElementById('total').textContent            = shown  || 0;
+        document.getElementById('presentCard').textContent      = present || 0;
+        document.getElementById('absentCard').textContent       = (shown||0) - (present||0);
+    }
 
-        document.getElementById('count').textContent            = present;
-        document.getElementById('total').textContent            = shown;
-        document.getElementById('presentCard').textContent      = present;
-        document.getElementById('absentCard').textContent       = shown - present;
-        document.getElementById('totalMembersCard').textContent = total;
-
-        const sessions = getSessions();
-        if (sessions.length) {
-            const avg = Math.round(sessions.reduce((s,x) => s + x.attendance.filter(a=>a.present).length, 0) / sessions.length);
+    function updateAvg(sessions) {
+        if (sessions && sessions.length) {
+            const avg = Math.round(sessions.reduce((s,x) => s + (x.attendance||[]).filter(a=>a.present).length, 0) / sessions.length);
             document.getElementById('avgCard').textContent = avg;
         } else {
             document.getElementById('avgCard').textContent = '—';
         }
-        updateGenderBreakdown();
     }
 
-    // ── Gender Breakdown ──────────────────────────────────────
     function updateGenderBreakdown() {
         const rows = document.querySelectorAll('#attendanceBody tr[data-id]');
-        const total = rows.length;
         let male=0, female=0, child=0, unspec=0;
+        const total = rows.length;
         rows.forEach(r => {
-            const g = r.dataset.gender||'unspec';
+            const g = r.dataset.gender||'';
             if(g==='male') male++; else if(g==='female') female++; else if(g==='child') child++; else unspec++;
         });
-        document.getElementById('attMale').textContent   = male;
-        document.getElementById('attFemale').textContent = female;
-        document.getElementById('attChild').textContent  = child;
-        document.getElementById('attUnspec').textContent = unspec;
+        const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+        set('attMale', male); set('attFemale', female); set('attChild', child); set('attUnspec', unspec);
         const pct = n => total ? ((n/total)*100).toFixed(1)+'%' : '0%';
-        document.getElementById('attBarMale').style.width   = pct(male);
-        document.getElementById('attBarFemale').style.width = pct(female);
-        document.getElementById('attBarChild').style.width  = pct(child);
-        document.getElementById('attBarUnspec').style.width = pct(unspec);
+        ['attBarMale','attBarFemale','attBarChild','attBarUnspec'].forEach((id,i) => {
+            const el = document.getElementById(id);
+            if(el) el.style.width = pct([male,female,child,unspec][i]);
+        });
     }
 
-    // ── Submit ────────────────────────────────────────────────
-    function submitAttendance() {
+    // ── Submit Attendance ─────────────────────────────────────
+    async function submitAttendance() {
         const date    = document.getElementById('serviceDate').value;
         const service = document.getElementById('serviceType').value;
         if (!date) { showToast('⚠️ Please select a service date.', true); return; }
 
-        const rows       = document.querySelectorAll('#attendanceBody tr[data-id]');
-        const history    = getHistory();
-        const attendance = [];
+        const rows = document.querySelectorAll('#attendanceBody tr[data-id]');
+        if (!rows.length) { showToast('⚠️ No members to submit.', true); return; }
+
         const d = new Date(date);
         const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 
+        const attendance = [];
         rows.forEach(row => {
-            const id      = row.dataset.id;
-            const name    = row.dataset.name;
-            const dept    = row.dataset.dept;
-            const gender  = row.dataset.gender;
-            const present = row.querySelector('input[type="checkbox"]').checked;
-            attendance.push({ id, name, dept, gender, present });
-            if (present) history[id] = dateStr;
+            const cb      = row.querySelector('input[type="checkbox"]');
+            const present = cb ? cb.checked : false;
+            attendance.push({
+                id: row.dataset.id, name: row.dataset.name,
+                dept: row.dataset.dept, gender: row.dataset.gender, present
+            });
         });
 
-        saveHistory(history);
-        const sessions = getSessions();
-        sessions.push({ date, service, attendance, submittedAt: new Date().toISOString() });
-        localStorage.setItem(SESSION_KEY, JSON.stringify(sessions));
-        logActivity(`✅ Attendance submitted: ${attendance.filter(a=>a.present).length}/${attendance.length} — ${service}`, 'attendance');
-
-        const present = document.getElementById('count').textContent;
-        const total   = document.getElementById('total').textContent;
-        showToast(`✅ ${service} — ${present} of ${total} members marked present.`);
-        renderRoll(document.getElementById('attSearch')?.value||'', document.getElementById('filterGroup')?.value||'', document.getElementById('filterGender')?.value||'');
+        showToast('⏳ Submitting...'); 
+        try {
+            // Upsert last seen for present members
+            for (const a of attendance) {
+                if (a.present) await upsertLastSeen(a.id, dateStr);
+            }
+            await saveSessionToDB(date, service, attendance);
+            const present = attendance.filter(a=>a.present).length;
+            showToast(`✅ ${service} — ${present} of ${attendance.length} members present.`);
+            await renderRoll(
+                document.getElementById('attSearch')?.value || '',
+                document.getElementById('filterGroup')?.value || '',
+                document.getElementById('filterGender')?.value || ''
+            );
+        } catch(err) {
+            showToast('❌ Error submitting: ' + err.message, true);
+        }
     }
 
     // ── Filter & Sync ─────────────────────────────────────────
     function filterTable(text) {
-        renderRoll(text, document.getElementById('filterGroup')?.value||'', document.getElementById('filterGender')?.value||'');
+        renderRoll(text,
+            document.getElementById('filterGroup')?.value || '',
+            document.getElementById('filterGender')?.value || '');
     }
-    function syncFromMembers() {
-        renderRoll(document.getElementById('attSearch')?.value||'', document.getElementById('filterGroup')?.value||'', document.getElementById('filterGender')?.value||'');
-        showToast(`🔄 Synced — ${getMembers().length} members loaded.`);
+
+    async function syncFromMembers() {
+        await renderRoll(
+            document.getElementById('attSearch')?.value || '',
+            document.getElementById('filterGroup')?.value || '',
+            document.getElementById('filterGender')?.value || '');
+        showToast('🔄 Members synced.');
     }
 
     // ── Streak ────────────────────────────────────────────────
-    function getStreak(memberId) {
-        const sessions = getSessions().slice().reverse();
+    function getStreak(memberId, sessions) {
+        if (!sessions || !sessions.length) return 0;
+        const sorted = [...sessions].sort((a,b) => new Date(b.submitted_at) - new Date(a.submitted_at));
         let streak = 0;
-        for (const s of sessions) {
-            const r = s.attendance.find(a => a.id === memberId);
+        for (const s of sorted) {
+            const r = (s.attendance||[]).find(a => a.id === memberId);
             if (r && r.present) streak++; else break;
         }
         return streak;
     }
 
-    // ── Print Roll ────────────────────────────────────────────
-    function exportAttendanceSheet() {
-        const members = getMembers();
-        const history = getHistory();
-        const date    = document.getElementById('serviceDate').value;
-        const service = document.getElementById('serviceType').value;
-        const months  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-        const d       = date ? new Date(date) : new Date();
-        const dStr    = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-        const gLabel  = { male:'Male', female:'Female', child:'Child' };
-        const rows    = members.map((m,i) => `<tr>
-            <td style="padding:8px;border-bottom:1px solid #eee;">${i+1}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">${m.name}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee;">${m.dept||'—'}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee;">${gLabel[m.gender]||'—'}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee;color:#888;font-size:0.85rem;">${history[m.id]||'Never'}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;"><span style="display:inline-block;width:20px;height:20px;border:2px solid #2e7d32;border-radius:3px;"></span></td>
-        </tr>`).join('');
-        const win = window.open('','_blank');
-        win.document.write(`<!DOCTYPE html><html><head><title>Attendance Roll</title>
-            <style>body{font-family:'Segoe UI',sans-serif;padding:24px;}h2{color:#1b5e20;}table{width:100%;border-collapse:collapse;}th{background:#e8f5e9;color:#1b5e20;padding:8px;text-align:left;border-bottom:2px solid #2e7d32;}@media print{button{display:none;}}</style>
-            </head><body>
-            <h2>ICGC — Attendance Roll</h2>
-            <p style="color:#666;font-size:0.88rem;margin-bottom:16px;">${service} · ${dStr} · ${members.length} members</p>
-            <button onclick="window.print()" style="margin-bottom:14px;padding:8px 18px;background:#2e7d32;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">🖨 Print</button>
-            <table><thead><tr><th>#</th><th>Name</th><th>Department</th><th>Gender</th><th>Last Attended</th><th style="text-align:center;">Present ✓</th></tr></thead>
-            <tbody>${rows}</tbody></table>
-            <div style="margin-top:24px;font-size:0.76rem;color:#aaa;text-align:center;">Generated ${new Date().toLocaleString()} · ICGC Management System</div>
-            </body></html>`);
-        win.document.close();
-    }
-
-    // ── Render History ────────────────────────────────────────
-    function renderHistory() {
-        const sessions  = getSessions();
+    // ── History ───────────────────────────────────────────────
+    async function renderHistory() {
         const container = document.getElementById('historyContent');
-        if (!sessions.length) {
-            container.innerHTML = `<div style="text-align:center;padding:36px;color:#999;">
-                <div style="font-size:2rem;margin-bottom:10px;">📋</div>
-                <p style="font-weight:600;">No sessions yet.</p>
-                <p style="font-size:0.83rem;margin-top:5px;">Submit attendance to build history.</p>
-            </div>`; return;
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;">⏳ Loading history...</div>';
+        try {
+            const sessions = await getSessions();
+            if (!sessions.length) {
+                container.innerHTML = `<div style="text-align:center;padding:40px;color:#999;">
+                    <div style="font-size:2rem;margin-bottom:10px;">📋</div>
+                    <p style="font-weight:600;">No sessions recorded yet.</p>
+                    <p style="font-size:0.85rem;margin-top:6px;">Submit attendance to start building history.</p>
+                </div>`; return;
+            }
+            container.innerHTML = sessions.map(s => {
+                const att    = s.attendance || [];
+                const present = att.filter(a=>a.present);
+                const absent  = att.filter(a=>!a.present);
+                const total   = att.length;
+                const pct     = total ? Math.round((present.length/total)*100) : 0;
+                const gc      = {};
+                att.forEach(a => { const g=a.gender||'unspec'; gc[g]=(gc[g]||0)+1; });
+                return `<div style="border:1px solid #eee;border-radius:10px;padding:16px;margin-bottom:12px;background:#fafafa;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+                        <div>
+                            <div style="font-weight:700;color:#1b5e20;">📅 ${s.session_date} — ${s.service}</div>
+                            <div style="font-size:0.78rem;color:#aaa;">Submitted: ${new Date(s.submitted_at).toLocaleString()}</div>
+                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <span style="background:#c8e6c9;color:#2e7d32;padding:3px 10px;border-radius:20px;font-size:0.82rem;font-weight:700;">✅ ${present.length}</span>
+                            <span style="background:#ffcdd2;color:#c62828;padding:3px 10px;border-radius:20px;font-size:0.82rem;font-weight:700;">❌ ${absent.length}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;background:#eee;border-radius:6px;height:8px;">
+                        <div style="width:${pct}%;background:#2e7d32;border-radius:6px;height:8px;"></div>
+                    </div>
+                    <div style="font-size:0.75rem;color:#888;margin-top:3px;">${pct}% attendance rate</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                        ${gc.male   ? `<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;">👨 ${gc.male}</span>` : ''}
+                        ${gc.female ? `<span style="background:#fce4ec;color:#c2185b;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;">👩 ${gc.female}</span>` : ''}
+                        ${gc.child  ? `<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;">🧒 ${gc.child}</span>` : ''}
+                    </div>
+                    ${present.length ? `<div style="margin-top:10px;"><div style="font-size:0.78rem;font-weight:700;color:#2e7d32;margin-bottom:5px;">Present:</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${present.map(m=>`<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:0.75rem;">${m.name}</span>`).join('')}</div></div>` : ''}
+                    ${absent.length  ? `<div style="margin-top:6px;"><div style="font-size:0.78rem;font-weight:700;color:#c62828;margin-bottom:5px;">Absent:</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${absent.map(m=>`<span style="background:#ffebee;color:#c62828;padding:2px 8px;border-radius:10px;font-size:0.75rem;">${m.name}</span>`).join('')}</div></div>` : ''}
+                </div>`;
+            }).join('');
+        } catch(err) {
+            container.innerHTML = `<div style="text-align:center;padding:30px;color:#c62828;">❌ ${err.message}</div>`;
         }
-        container.innerHTML = [...sessions].reverse().map(s => {
-            const pl = s.attendance.filter(a=>a.present);
-            const al = s.attendance.filter(a=>!a.present);
-            const t  = s.attendance.length;
-            const pct = t ? Math.round((pl.length/t)*100) : 0;
-            const gc  = {male:0,female:0,child:0,unspec:0};
-            s.attendance.forEach(a => { const g=a.gender||'unspec'; gc[g]!==undefined?gc[g]++:gc.unspec++; });
-            return `<div style="border:1px solid #eee;border-radius:10px;padding:16px;margin-bottom:12px;background:#fafafa;">
-                <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                    <div>
-                        <div style="font-weight:700;color:#1b5e20;font-size:0.95rem;">📅 ${s.date} — ${s.service}</div>
-                        <div style="font-size:0.75rem;color:#aaa;margin-top:2px;">Submitted: ${new Date(s.submittedAt).toLocaleString()}</div>
-                    </div>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <span style="background:#c8e6c9;color:#2e7d32;padding:3px 10px;border-radius:20px;font-weight:bold;font-size:0.8rem;">✅ ${pl.length} Present</span>
-                        <span style="background:#ffcdd2;color:#c62828;padding:3px 10px;border-radius:20px;font-weight:bold;font-size:0.8rem;">❌ ${al.length} Absent</span>
-                    </div>
-                </div>
-                <div style="background:#e0e0e0;border-radius:8px;height:7px;margin-bottom:4px;">
-                    <div style="width:${pct}%;background:#2e7d32;border-radius:8px;height:7px;"></div>
-                </div>
-                <div style="font-size:0.74rem;color:#888;margin-bottom:8px;">${pct}% attendance rate</div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-                    ${gc.male?`<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:0.74rem;font-weight:600;">👨 ${gc.male}</span>`:''}
-                    ${gc.female?`<span style="background:#fce4ec;color:#e91e8c;padding:2px 8px;border-radius:10px;font-size:0.74rem;font-weight:600;">👩 ${gc.female}</span>`:''}
-                    ${gc.child?`<span style="background:#fff3e0;color:#ff9800;padding:2px 8px;border-radius:10px;font-size:0.74rem;font-weight:600;">🧒 ${gc.child}</span>`:''}
-                </div>
-                ${pl.length?`<div style="margin-bottom:6px;"><div style="font-size:0.76rem;font-weight:700;color:#2e7d32;margin-bottom:5px;">Present:</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${pl.map(m=>`<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:0.76rem;">${m.name}</span>`).join('')}</div></div>`:''}
-                ${al.length?`<div><div style="font-size:0.76rem;font-weight:700;color:#c62828;margin-bottom:5px;">Absent:</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${al.map(m=>`<span style="background:#ffebee;color:#c62828;padding:2px 8px;border-radius:10px;font-size:0.76rem;">${m.name}</span>`).join('')}</div></div>`:''}
-            </div>`;
-        }).join('');
     }
 
-    function clearHistory() {
+    async function clearHistory() {
         if (!confirm('Clear all attendance history? This cannot be undone.')) return;
-        localStorage.removeItem(SESSION_KEY);
-        localStorage.removeItem(HIST_KEY);
-        renderHistory();
-        showToast('🗑️ History cleared.');
+        try {
+            await sbFetch('attendance_sessions','DELETE',null,'?id=gt.0');
+            await sbFetch('attendance_last_seen','DELETE',null,'?member_id=neq.~');
+            await renderHistory();
+            showToast('🗑️ History cleared.');
+        } catch(err) { showToast('❌ ' + err.message, true); }
     }
 
     // ── Member List Modal ─────────────────────────────────────
-    function openMemberListModal() {
-        const members = getMembers();
-        const gIcon   = {male:'👨',female:'👩',child:'🧒'};
-        const rows    = members.length
-            ? members.map((m,i)=>`<tr style="border-bottom:1px solid #eee;">
-                <td style="padding:9px 12px;font-size:0.8rem;color:#aaa;">${i+1}</td>
+    async function openMemberListModal() {
+        const members = await getMembers();
+        const modal   = document.createElement('div');
+        modal.id      = 'memberListModal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:5000;display:flex;justify-content:center;align-items:center;padding:16px;';
+        const gIcon = { male:'👨', female:'👩', child:'🧒' };
+        const rows  = members.length
+            ? members.map((m,i) => `<tr style="border-bottom:1px solid #eee;">
+                <td style="padding:9px 12px;font-size:0.82rem;color:#aaa;">${i+1}</td>
                 <td style="padding:9px 12px;font-weight:600;font-size:0.88rem;">${m.name}</td>
                 <td style="padding:9px 12px;font-size:0.8rem;color:#555;">${m.dept||'—'}</td>
                 <td style="padding:9px 12px;font-size:0.8rem;">${gIcon[m.gender]||'👤'} ${m.gender||'—'}</td>
-                <td style="padding:9px 12px;">
-                    <span style="background:${m.status==='active'?'#c8e6c9':'#fff9c4'};color:${m.status==='active'?'#2e7d32':'#f9a825'};padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;">
-                        ${m.status==='active'?'Active':'Visitor'}
-                    </span>
-                </td></tr>`).join('')
+                <td style="padding:9px 12px;"><span style="background:${m.status==='active'?'#c8e6c9':'#fff9c4'};color:${m.status==='active'?'#2e7d32':'#f9a825'};padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;">${m.status==='active'?'Active':'Visitor'}</span></td>
+              </tr>`).join('')
             : '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">No members yet.</td></tr>';
-
-        const modal = document.createElement('div');
-        modal.id = 'memberListModal';
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:9000;display:flex;justify-content:center;align-items:center;padding:12px;';
         modal.innerHTML = `
-            <div style="background:#fff;border-radius:14px;width:580px;max-width:100%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.25);">
+            <div style="background:#fff;border-radius:14px;width:600px;max-width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.25);">
                 <div style="padding:16px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
-                    <div>
-                        <h2 style="color:#1b5e20;font-size:1rem;">👥 All Members</h2>
-                        <p style="font-size:0.76rem;color:#aaa;margin-top:2px;">${members.length} registered</p>
-                    </div>
-                    <button onclick="document.getElementById('memberListModal').remove()"
-                        style="background:#eee;border:none;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;">✕</button>
+                    <div><h2 style="color:#1b5e20;font-size:1.05rem;">👥 Member Directory</h2>
+                    <p style="font-size:0.78rem;color:#888;margin-top:2px;">${members.length} member${members.length!==1?'s':''}</p></div>
+                    <button onclick="document.getElementById('memberListModal').remove()" style="background:#eee;border:none;border-radius:8px;padding:7px 14px;font-weight:700;cursor:pointer;">✕</button>
                 </div>
-                <div style="padding:10px 20px;border-bottom:1px solid #eee;">
+                <div style="padding:10px 18px;border-bottom:1px solid #eee;">
                     <input type="text" placeholder="Search..." oninput="filterMemberModal(this.value)"
                         style="width:100%;padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88rem;outline:none;background:#fff;color:#222;">
                 </div>
@@ -670,11 +692,11 @@
                     <table style="width:100%;border-collapse:collapse;">
                         <thead style="position:sticky;top:0;background:#f9f9f9;">
                             <tr>
-                                <th style="padding:9px 12px;text-align:left;font-size:0.72rem;color:#888;border-bottom:2px solid #eee;">#</th>
-                                <th style="padding:9px 12px;text-align:left;font-size:0.72rem;color:#888;border-bottom:2px solid #eee;">Name</th>
-                                <th style="padding:9px 12px;text-align:left;font-size:0.72rem;color:#888;border-bottom:2px solid #eee;">Dept</th>
-                                <th style="padding:9px 12px;text-align:left;font-size:0.72rem;color:#888;border-bottom:2px solid #eee;">Gender</th>
-                                <th style="padding:9px 12px;text-align:left;font-size:0.72rem;color:#888;border-bottom:2px solid #eee;">Status</th>
+                                <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">#</th>
+                                <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Name</th>
+                                <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Dept</th>
+                                <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Gender</th>
+                                <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Status</th>
                             </tr>
                         </thead>
                         <tbody id="memberModalBody">${rows}</tbody>
@@ -694,26 +716,55 @@
         });
     }
 
+    // ── Print Roll ────────────────────────────────────────────
+    async function exportAttendanceSheet() {
+        const members = await getMembers();
+        const history = await getLastSeen();
+        const date    = document.getElementById('serviceDate').value;
+        const service = document.getElementById('serviceType').value;
+        const d    = date ? new Date(date) : new Date();
+        const mths = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const dStr = `${d.getDate()} ${mths[d.getMonth()]} ${d.getFullYear()}`;
+        const gLabel = { male:'Male', female:'Female', child:'Child' };
+        const rows = members.map((m,i) => `
+            <tr><td style="padding:8px;border-bottom:1px solid #eee;">${i+1}</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">${m.name}</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;">${m.dept||'—'}</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;">${gLabel[m.gender]||'—'}</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#888;font-size:0.82rem;">${history[m.id]||'Never'}</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;"><span style="display:inline-block;width:20px;height:20px;border:2px solid #2e7d32;border-radius:3px;"></span></td></tr>`).join('');
+        const win = window.open('','_blank');
+        win.document.write(`<!DOCTYPE html><html><head><title>Attendance Roll — ${dStr}</title>
+            <style>body{font-family:'Segoe UI',sans-serif;padding:24px;}h2{color:#1b5e20;}table{width:100%;border-collapse:collapse;}th{background:#e8f5e9;color:#1b5e20;padding:8px;text-align:left;border-bottom:2px solid #2e7d32;}@media print{button{display:none;}}</style></head><body>
+            <h2>ICGC Rehoboth — Attendance Roll</h2>
+            <p>${service} | ${dStr} | Total: ${members.length}</p>
+            <button onclick="window.print()" style="margin-bottom:14px;padding:8px 18px;background:#2e7d32;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">🖨 Print</button>
+            <table><thead><tr><th>#</th><th>Name</th><th>Dept</th><th>Gender</th><th>Last Attended</th><th style="text-align:center;">Present ✓</th></tr></thead>
+            <tbody>${rows}</tbody></table></body></html>`);
+        win.document.close();
+    }
+
     // ── Dark Mode ─────────────────────────────────────────────
     function applyTheme() {
         const t = localStorage.getItem('icgc_theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
         const btn = document.getElementById('darkBtn');
-        if (btn) btn.textContent = t === 'dark' ? '☀ Light' : '🌙 Dark';
+        if (btn) btn.textContent = t==='dark' ? '☀ Light' : '🌙 Dark';
     }
     function toggleDark() {
-        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const next = isDark ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('icgc_theme', next);
         const btn = document.getElementById('darkBtn');
-        if (btn) btn.textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
+        if (btn) btn.textContent = next==='dark' ? '☀ Light' : '🌙 Dark';
     }
 
     // ── Auto Date ─────────────────────────────────────────────
     function setAutoDate() {
-        const now   = new Date();
-        const days  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-        const months= ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const now = new Date();
+        const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         const d = now.getDate();
         const s = (d%10===1&&d!==11)?'st':(d%10===2&&d!==12)?'nd':(d%10===3&&d!==13)?'rd':'th';
         const el = document.getElementById('currentDate');
@@ -731,46 +782,47 @@
         if (sn && s.adminName)  sn.textContent = s.adminName + ' Admin';
     }
 
-    // ── Activity Logger ───────────────────────────────────────
-    function logActivity(msg, type) {
-        const list = JSON.parse(localStorage.getItem('icgc_activity') || '[]');
-        list.push({ msg, type: type||'member', ts: Date.now() });
-        if (list.length > 50) list.splice(0, list.length-50);
-        localStorage.setItem('icgc_activity', JSON.stringify(list));
-    }
-
     // ── Logout ────────────────────────────────────────────────
     function confirmLogout()    { document.getElementById('logoutModal').classList.add('active'); }
     function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('active'); }
-    function doLogout()         { location.href = 'l1.html'; }
+    async function doLogout() {
+        const session = localStorage.getItem('icgc_session');
+        if (session) {
+            try {
+                const s = JSON.parse(session);
+                if (s.access_token) {
+                    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+                        method:'POST',
+                        headers:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${s.access_token}`}
+                    });
+                }
+            } catch(e) {}
+        }
+        localStorage.removeItem('icgc_session');
+        window.location.href = 'l1.html';
+    }
 
     // ── Toast ─────────────────────────────────────────────────
     function showToast(msg, isError=false) {
-        const t = document.getElementById('toast');
-        t.textContent = msg;
-        t.style.background = isError ? '#c62828' : '#1b5e20';
-        t.classList.remove('show');
-        void t.offsetWidth;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3200);
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.style.background = isError ? '#c62828' : '#1b5e20';
+        toast.classList.remove('show');
+        void toast.offsetWidth;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3200);
     }
 
     // ── Init ──────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
         applyTheme();
         applySettings();
         setAutoDate();
-        renderRoll();
+        try { await renderRoll(); }
+        catch(err) { console.error('Attendance init:', err); }
     });
-
-    // Auto-refresh when scanner updates localStorage
-    window.addEventListener('storage', e => {
-        if (e.key === 'icgc_members' || e.key === 'icgc_attendance_lastSeen') {
-            renderRoll(document.getElementById('attSearch')?.value||'', document.getElementById('filterGroup')?.value||'', document.getElementById('filterGender')?.value||'');
-            showToast('🔄 Attendance roll updated — new check-in detected.');
-        }
-        if (e.key === 'icgc_attendance_sessions') updateCount();
-    });
+    setInterval(async () => { try { await renderRoll(); } catch(e){} }, 30000);
 </script>
 
 </body>
