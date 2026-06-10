@@ -663,37 +663,11 @@
     </div>
 </div>
 
-
-<script>
-    // ── Session Guard ─────────────────────────────────────
-    (function() {
-        const session = localStorage.getItem('icgc_session');
-        if (!session) { window.location.href = 'l1.html'; return; }
-        try {
-            const s = JSON.parse(session);
-            if (s.expires_at < Date.now()) {
-                localStorage.removeItem('icgc_session');
-                window.location.href = 'l1.html';
-            }
-            // Show user name in sidebar if available
-            window.addEventListener('DOMContentLoaded', () => {
-                const nameEl = document.getElementById('sidebarName');
-                if (nameEl && s.user?.name) nameEl.textContent = s.user.name;
-                const roleEl = document.getElementById('sidebarBranch');
-                if (roleEl) roleEl.textContent = s.user?.role === 'superadmin' ? '👑 Super Admin' : '👤 Staff';
-            });
-        } catch(e) {
-            localStorage.removeItem('icgc_session');
-            window.location.href = 'l1.html';
-        }
-    })();
-</script>
-
 <div id="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -849,44 +823,37 @@
         // ── localStorage ─────────────────────────────────────
         const INV_KEY = 'icgc_inventory';
 
-        const SUPABASE_URL = 'https://negrfzkejqfmswxnfiyk.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8';
+        // Old seed asset names to detect and clear stale data
+        const SEED_NAMES = ['Yamaha Digital Piano','Behringer Audio Mixer','Plastic Chairs (White)','Wireless Microphones'];
 
-        async function sbFetch(path, method='GET', body=null, extra='') {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${extra}`, {
-                method,
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': method==='POST' ? 'return=representation' : ''
-                },
-                body: body ? JSON.stringify(body) : null
-            });
-            if (!res.ok) { const e = await res.text(); throw new Error(e); }
-            const t = await res.text(); return t ? JSON.parse(t) : [];
-        }
-
-        function showSaving(on) {
-            let el = document.getElementById('savingInd');
-            if (!el) {
-                el = document.createElement('div'); el.id='savingInd';
-                el.style.cssText='position:fixed;top:60px;right:16px;background:#1b5e20;color:white;padding:8px 16px;border-radius:8px;font-size:0.82rem;font-weight:700;z-index:9999;display:none;';
-                el.textContent='💾 Saving...'; document.body.appendChild(el);
+        function loadAssets() {
+            const raw = localStorage.getItem(INV_KEY);
+            if (!raw) {
+                localStorage.setItem(INV_KEY, JSON.stringify([]));
+                return [];
             }
-            el.style.display = on ? 'block' : 'none';
+            let list = JSON.parse(raw);
+            // If list contains ONLY seed items (user hasn't added anything real), clear it
+            const allSeed = list.length > 0 && list.every(a => SEED_NAMES.includes(a.name));
+            if (allSeed) {
+                localStorage.setItem(INV_KEY, JSON.stringify([]));
+                return [];
+            }
+            // Remove individual seed items mixed in with real data
+            const cleaned = list.filter(a => !SEED_NAMES.includes(a.name));
+            if (cleaned.length !== list.length) {
+                localStorage.setItem(INV_KEY, JSON.stringify(cleaned));
+                return cleaned;
+            }
+            return list;
         }
 
-        async function getInventoryFromDB() {
-            const rows = await sbFetch('inventory?order=created_at.asc');
-            return rows.map(r => ({
-                id: r.id, name: r.name, category: r.category,
-                qty: r.qty, minQty: r.min_qty,
-                condition: r.condition, date: r.last_date
-            }));
+        function getAssets() { return JSON.parse(localStorage.getItem(INV_KEY) || '[]'); }
+        function saveAssets(list) { localStorage.setItem(INV_KEY, JSON.stringify(list)); }
+        function nextId() {
+            const list = getAssets();
+            return list.length ? Math.max(...list.map(a => a.id)) + 1 : 1;
         }
-
-        // DB helpers via Supabase — getInventoryFromDB defined above
 
         // ── Condition map ─────────────────────────────────────
         const condMap = {
@@ -896,8 +863,8 @@
         };
 
         // ── Render ────────────────────────────────────────────
-        async function renderTable() {
-            const list  = await getInventoryFromDB();
+        function renderTable() {
+            const list  = getAssets();
             const tbody = document.getElementById('inventoryBody');
             tbody.innerHTML = '';
 
@@ -943,8 +910,8 @@
         }
 
         // ── Low Stock / Reorder Check ─────────────────────────
-        async function checkLowStock() {
-            const list   = await getInventoryFromDB();
+        function checkLowStock() {
+            const list   = getAssets();
             const alerts = list.filter(a => a.minQty && parseInt(a.qty) < parseInt(a.minQty));
             const panel  = document.getElementById('lowStockPanel');
             const el     = document.getElementById('lowStockList');
@@ -960,14 +927,14 @@
                 </div>`).join('');
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', () => {
           try {
             applyTheme();
             applySettings();
             setAutoDate();
-            showSaving(true);
-            await renderTable();
-            await checkLowStock();
+            loadAssets();
+            renderTable();
+            checkLowStock();
             // Auto-filter if arriving from dashboard alerts card
             const params = new URLSearchParams(window.location.search);
             if (params.get('filter') === 'alerts') {
@@ -989,10 +956,16 @@
             }
           } catch(err) {
                 console.error('Inventory init error:', err);
-                showToast && showToast('⚠️ Could not load inventory. Check internet.', true);
-            } finally { showSaving(false); }
+                setTimeout(() => { try { renderTable(); checkLowStock(); } catch(e){} }, 300);
+            }
         });
-        setInterval(async () => { try { await renderTable(); await checkLowStock(); } catch(e){} }, 30000);
+
+        // ── Cross-tab sync ────────────────────────────────────
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'icgc_inventory') {
+                try { renderTable(); checkLowStock(); } catch(err) {}
+            }
+        });
 
         // ── Modal state ──────────────────────────────────────
         let editingId = null;
@@ -1014,11 +987,10 @@
             document.getElementById('assetModal').classList.remove('active');
         }
 
-        async function editRow(btn) {
+        function editRow(btn) {
             const row   = btn.closest('tr');
             editingId   = parseInt(row.dataset.id);
-            const list  = await getInventoryFromDB();
-            const asset = list.find(a => a.id === editingId);
+            const asset = getAssets().find(a => a.id === editingId);
             if (!asset) return;
 
             document.getElementById('modalTitle').textContent = 'Edit Asset';
@@ -1032,7 +1004,7 @@
             document.getElementById('assetModal').classList.add('active');
         }
 
-        async function saveAsset() {
+        function saveAsset() {
             const name      = document.getElementById('assetName').value.trim();
             const category  = document.getElementById('assetCategory').value;
             const qty       = document.getElementById('assetQty').value.trim();
@@ -1042,28 +1014,19 @@
             if (!name || !qty || !dateVal) { showToast('⚠️ Please fill in all fields.', true); return; }
             const displayDate = formatDate(dateVal);
             let list = getAssets();
-            showSaving(true);
-            try {
-                if (editingId) {
-                    await sbFetch(`inventory?id=eq.${editingId}`, 'PATCH', {
-                        name, category, qty, min_qty: minQty,
-                        condition, last_date: displayDate
-                    });
-                    logActivity(`✏️ Inventory updated: ${name}`, 'inventory');
-                    showToast('✅ Asset updated!');
-                } else {
-                    await sbFetch('inventory', 'POST', {
-                        name, category, qty, min_qty: minQty,
-                        condition, last_date: displayDate
-                    });
-                    logActivity(`📦 New asset: ${name}`, 'inventory');
-                    showToast('✅ Asset registered!');
-                }
-                await renderTable();
-                checkLowStock();
-                closeModal();
-            } catch(err) { alert('Error saving: ' + err.message); }
-            finally { showSaving(false); }
+            if (editingId) {
+                list = list.map(a => a.id === editingId ? { ...a, name, category, qty, minQty, condition, date: displayDate } : a);
+                logActivity(`✏️ Inventory updated: ${name}`, 'inventory');
+                showToast('✅ Asset updated successfully!');
+            } else {
+                list.push({ id: nextId(), name, category, qty, minQty, condition, date: displayDate });
+                logActivity(`📦 New asset registered: ${name}`, 'inventory');
+                showToast('✅ Asset registered successfully!');
+            }
+            saveAssets(list);
+            renderTable();
+            checkLowStock();
+            closeModal();
         }
 
         // ── Delete ────────────────────────────────────────────
@@ -1072,7 +1035,7 @@
         function deleteRow(btn) {
             const row = btn.closest('tr');
             deletingId = parseInt(row.dataset.id);
-            const asset = await getInventoryFromDB().find(a => a.id === deletingId);
+            const asset = getAssets().find(a => a.id === deletingId);
             document.getElementById('deleteName').textContent = asset ? asset.name : '';
             document.getElementById('deleteModal').classList.add('active');
         }
@@ -1093,7 +1056,7 @@
         }
 
         // ── Search filter ─────────────────────────────────────
-        async function filterTable(query) {
+        function filterTable(query) {
             document.querySelectorAll('#inventoryBody tr').forEach(row => {
                 row.style.display = row.innerText.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
             });
@@ -1185,29 +1148,6 @@
             if (sn && s.adminName)  sn.textContent  = s.adminName + ' Admin';
         }
 
-
-        // ── Logout ────────────────────────────────────────────
-        function confirmLogout()    { document.getElementById('logoutModal').classList.add('active'); }
-        function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('active'); }
-        async function doLogout() {
-            try {
-                const session = localStorage.getItem('icgc_session');
-                if (session) {
-                    const s = JSON.parse(session);
-                    if (s.access_token) {
-                        await fetch('https://negrfzkejqfmswxnfiyk.supabase.co/auth/v1/logout', {
-                            method: 'POST',
-                            headers: {
-                                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8',
-                                'Authorization': `Bearer ${s.access_token}`
-                            }
-                        });
-                    }
-                }
-            } catch(e) {}
-            localStorage.removeItem('icgc_session');
-            window.location.href = 'l1.html';
-        }
     </script>
 
 
