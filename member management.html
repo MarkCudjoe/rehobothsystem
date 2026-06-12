@@ -681,37 +681,11 @@
     </div>
 </div>
 
-
-<script>
-    // ── Session Guard ─────────────────────────────────────
-    (function() {
-        const session = localStorage.getItem('icgc_session');
-        if (!session) { window.location.href = 'l1.html'; return; }
-        try {
-            const s = JSON.parse(session);
-            if (s.expires_at < Date.now()) {
-                localStorage.removeItem('icgc_session');
-                window.location.href = 'l1.html';
-            }
-            // Show user name in sidebar if available
-            window.addEventListener('DOMContentLoaded', () => {
-                const nameEl = document.getElementById('sidebarName');
-                if (nameEl && s.user?.name) nameEl.textContent = s.user.name;
-                const roleEl = document.getElementById('sidebarBranch');
-                if (roleEl) roleEl.textContent = s.user?.role === 'superadmin' ? '👑 Super Admin' : '👤 Staff';
-            });
-        } catch(e) {
-            localStorage.removeItem('icgc_session');
-            window.location.href = 'l1.html';
-        }
-    })();
-</script>
-
 <div id="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -940,7 +914,7 @@
         <div class="modal" style="max-width: 360px; text-align: center;">
             <h2 style="margin-bottom: 12px;">Remove Member?</h2>
             <p style="color: var(--text-grey); margin-bottom: 24px; font-size: 0.95rem;">
-                Are you sure you want to remove <strong id="deleteTargetName"></strong> from the directory? This cannot be undone.
+                Are you sure you want to remove <strong id="deleteName"></strong> from the directory? This cannot be undone.
             </p>
             <div class="modal-actions">
                 <button class="save-btn" style="background:#d32f2f;" onclick="confirmDelete()">Yes, Remove</button>
@@ -950,141 +924,467 @@
     </div>
 
     <script>
-        // ── Global error handler ──────────────────────────
-        window.addEventListener('error', function(e) {
-            console.error('JS Error:', e.message, 'at', e.filename, 'line', e.lineno);
-        });
-        window.addEventListener('unhandledrejection', function(e) {
-            console.error('Unhandled Promise:', e.reason);
-        });
-
         // ── Sidebar ──────────────────────────────────────────
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('active');
             document.getElementById('overlay').classList.toggle('active');
         }
 
-        // ── Supabase ──────────────────────────────────────────
-        const SUPABASE_URL = 'https://negrfzkejqfmswxnfiyk.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8';
+        // ── localStorage helpers ─────────────────────────────
+        const STORAGE_KEY = 'icgc_members';
 
-        async function sbFetch(path, method='GET', body=null, extra='') {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${extra}`, {
-                method,
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': method==='POST' ? 'return=representation' : ''
-                },
-                body: body ? JSON.stringify(body) : null
-            });
-            if (!res.ok) { const e = await res.text(); throw new Error(e); }
-            const t = await res.text(); return t ? JSON.parse(t) : [];
-        }
+        // Seed data shown on first load
+        // Old seed member names to detect and clear stale data
+        const SEED_MEMBER_NAMES = ['Kofi Mensah','Ama Serwaa','John Doe'];
 
-        async function getMembers() { return await sbFetch('members?order=created_at.asc'); }
-
-        async function saveMemberToDB(m) {
-            return await sbFetch('members', 'POST', {
-                id: m.id, name: m.name, phone: m.phone||'—',
-                dept: m.dept||'', gender: m.gender||'', dob: m.dob||'',
-                status: m.status||'active'
-            });
-        }
-
-        async function updateMemberInDB(m) {
-            return await sbFetch(`members?id=eq.${encodeURIComponent(m.id)}`, 'PATCH', {
-                name: m.name, phone: m.phone||'—',
-                dept: m.dept||'', gender: m.gender||'', dob: m.dob||'',
-                status: m.status||'active'
-            });
-        }
-
-        async function deleteMemberFromDB(id) {
-            return await sbFetch(`members?id=eq.${encodeURIComponent(id)}`, 'DELETE');
-        }
-
-        // ── Saving indicator ──────────────────────────────────
-        function showSaving(on) {
-            let el = document.getElementById('savingInd');
-            if (!el) {
-                el = document.createElement('div');
-                el.id = 'savingInd';
-                el.style.cssText = 'position:fixed;top:60px;right:16px;background:#1b5e20;color:white;padding:8px 16px;border-radius:8px;font-size:0.82rem;font-weight:700;z-index:9999;display:none;';
-                el.textContent = '💾 Saving...';
-                document.body.appendChild(el);
+        function loadMembers() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+                return [];
             }
-            el.style.display = on ? 'block' : 'none';
+            let list = JSON.parse(raw);
+            // If ALL items are seed data, clear them
+            const allSeed = list.length > 0 && list.every(m => SEED_MEMBER_NAMES.includes(m.name));
+            if (allSeed) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+                return [];
+            }
+            // Remove seed items mixed with real data
+            const cleaned = list.filter(m => !SEED_MEMBER_NAMES.includes(m.name));
+            if (cleaned.length !== list.length) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+                return cleaned;
+            }
+            return list;
         }
 
-        // ── Render table ──────────────────────────────────────
-        async function renderTable(members) {
-            if (!members) members = await getMembers();
+        function saveMembers(members) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(members));
+        }
+
+        function getMembers() {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        }
+
+        function nextId() {
+            const members = getMembers();
+            if (!members.length) return 'ICGC-001';
+            const nums = members.map(m => parseInt(m.id.replace('ICGC-', '')) || 0);
+            return 'ICGC-' + String(Math.max(...nums) + 1).padStart(3, '0');
+        }
+
+        // ── Render table from storage ─────────────────────────
+        function renderTable(members) {
             const tbody = document.getElementById('memberBody');
             tbody.innerHTML = '';
 
             if (!members.length) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">
-                    <div style="font-size:2rem;margin-bottom:10px;">👥</div>
-                    <div style="font-weight:600;">No members yet.</div>
-                    <div style="font-size:0.85rem;margin-top:5px;">Click <strong>+ Add New Member</strong> to get started.</div>
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#999;">
+                    <div style="font-size:2rem; margin-bottom:10px;">👥</div>
+                    <div style="font-weight:600;">No members in the directory yet.</div>
+                    <div style="font-size:0.85rem; margin-top:5px;">Click <strong>+ Add New Member</strong> to get started.</div>
                 </td></tr>`;
                 updateStatCards(members);
                 return;
             }
 
-            const gIcon = { male:'👨', female:'👩', child:'🧒' };
+            const genderIcon  = { male: '👨', female: '👩', child: '🧒' };
+            const genderLabel = { male: 'Male', female: 'Female', child: 'Child' };
+            const genderColor = { male: '#1565c0', female: '#e91e8c', child: '#ff9800' };
+
             members.forEach(m => {
                 const statusLabel = m.status === 'active' ? 'Active' : 'Visitor';
                 const statusClass = m.status === 'active' ? 'active-status' : 'visitor-status';
-                const gLabel = gIcon[m.gender] ? gIcon[m.gender] + ' ' + m.gender : '—';
-                const row = document.createElement('tr');
+                const g     = m.gender || 'unspecified';
+                const gIcon = genderIcon[g]  || '👤';
+                const gLbl  = genderLabel[g] || 'Unspecified';
+                const gClr  = genderColor[g] || '#999';
+                const row   = document.createElement('tr');
                 row.dataset.id = m.id;
                 row.innerHTML = `
+                    <td>#${m.id}</td>
                     <td>${m.name}</td>
-                    <td>${m.phone||'—'}</td>
-                    <td>${m.dept||'—'}</td>
-                    <td>${gLabel}</td>
+                    <td>${m.phone}</td>
+                    <td>${m.dept}</td>
+                    <td>
+                        <span style="background:${gClr}18; color:${gClr};
+                            padding:4px 10px; border-radius:20px;
+                            font-size:0.78rem; font-weight:bold;">
+                            ${gIcon} ${gLbl}
+                        </span>
+                    </td>
                     <td><span class="status ${statusClass}">${statusLabel}</span></td>
                     <td>
                         <span class="edit-btn" onclick="editRow(this)">Edit</span>
                         <span class="delete-btn" onclick="deleteRow(this)">Delete</span>
-                        <span style="color:#1565c0;cursor:pointer;font-weight:600;font-size:0.82rem;margin-left:8px;" onclick="viewTithes('${m.id}','${m.name.replace(/'/g,\"\\'\")}')" >💰 Tithes</span>
+                        <span style="color:#1565c0;cursor:pointer;font-weight:600;font-size:0.82rem;margin-left:8px;" onclick="viewTithes('${m.id}','${m.name}')">💰 Tithes</span>
                     </td>`;
                 tbody.appendChild(row);
             });
             updateStatCards(members);
         }
 
-        // ── Stat cards ────────────────────────────────────────
         function updateStatCards(members) {
-            const total   = members.length;
-            const active  = members.filter(m => m.status === 'active').length;
-            const visitor = members.filter(m => m.status === 'visitor').length;
-            const depts   = [...new Set(members.map(m => m.dept).filter(d => d && d !== 'Visitor'))].length;
-            const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-            set('statTotal', total); set('statActive', active);
-            set('statVisitors', visitor); set('statDepts', depts);
+            const total    = members.length;
+            const active   = members.filter(m => m.status === 'active').length;
+            const visitor  = members.filter(m => m.status === 'visitor').length;
+            const depts    = [...new Set(members.map(m => m.dept).filter(d => d !== 'Visitor'))].length;
+            const male     = members.filter(m => m.gender === 'male').length;
+            const female   = members.filter(m => m.gender === 'female').length;
+            const child    = members.filter(m => m.gender === 'child').length;
+            const unspec   = total - male - female - child;
 
-            // Gender breakdown
-            const male   = members.filter(m => m.gender === 'male').length;
-            const female = members.filter(m => m.gender === 'female').length;
-            const child  = members.filter(m => m.gender === 'child').length;
-            const unspec = members.filter(m => !m.gender || !['male','female','child'].includes(m.gender)).length;
-            set('statMale', male); set('statFemale', female);
-            set('statChild', child); set('statUnspecified', unspec);
-            const pct = n => total ? ((n/total)*100).toFixed(1)+'%' : '0%';
-            ['barMale','barFemale','barChild','barUnspec'].forEach((id,i) => {
-                const el = document.getElementById(id);
-                if(el) el.style.width = pct([male,female,child,unspec][i]);
+            document.getElementById('statTotal').textContent    = total;
+            document.getElementById('statActive').textContent   = active;
+            document.getElementById('statVisitors').textContent = visitor;
+            const deptEl = document.getElementById('statDepts');
+            if (deptEl) deptEl.textContent = depts;
+
+            document.getElementById('statMale').textContent        = male;
+            document.getElementById('statFemale').textContent      = female;
+            document.getElementById('statChild').textContent       = child;
+            document.getElementById('statUnspecified').textContent = unspec;
+
+            // Update stacked progress bar
+            const pct = (n) => total ? ((n / total) * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('barMale').style.width   = pct(male);
+            document.getElementById('barFemale').style.width = pct(female);
+            document.getElementById('barChild').style.width  = pct(child);
+            document.getElementById('barUnspec').style.width = pct(unspec);
+        }
+
+        // ── Directory Tab Switching ───────────────────────────
+        function switchDirTab(tab) {
+            const panelM  = document.getElementById('panelMembers');
+            const panelV  = document.getElementById('panelVisitors');
+            const btnM    = document.getElementById('tabMembers');
+            const btnV    = document.getElementById('tabVisitors');
+
+            if (tab === 'members') {
+                panelM.style.display = '';
+                panelV.style.display = 'none';
+                btnM.style.background = 'var(--primary-green)';
+                btnM.style.color      = 'white';
+                btnM.style.border     = 'none';
+                btnV.style.background = 'white';
+                btnV.style.color      = '#e65100';
+                btnV.style.border     = '2px solid #e65100';
+            } else {
+                panelM.style.display = 'none';
+                panelV.style.display = '';
+                btnV.style.background = '#e65100';
+                btnV.style.color      = 'white';
+                btnV.style.border     = 'none';
+                btnM.style.background = 'white';
+                btnM.style.color      = 'var(--primary-green)';
+                btnM.style.border     = '2px solid var(--primary-green)';
+                renderVisitorRecords();
+            }
+        }
+
+        // ── Render Visitor Records ────────────────────────────
+        function renderVisitorRecords() {
+            const members  = getMembers();
+            const visitors = members.filter(m => m.status === 'visitor' && m.visitDate);
+            const el       = document.getElementById('visitorRecordsList');
+
+            if (!visitors.length) {
+                el.innerHTML = `<div style="text-align:center;padding:40px;color:#999;">
+                    <div style="font-size:2.5rem;margin-bottom:12px;">🙋</div>
+                    <p style="font-weight:600;">No visitor forms submitted yet.</p>
+                    <p style="font-size:0.85rem;margin-top:6px;">Visitors who fill the QR check-in form will appear here.</p>
+                </div>`; return;
+            }
+
+            // Sort newest first
+            const sorted = [...visitors].sort((a,b) => (b.visitDate||'').localeCompare(a.visitDate||''));
+            const reasonLabel = { stay: '🏠 Staying (Joining)', visit: '✈️ Visiting' };
+            const genderIcon  = { male:'👨', female:'👩', child:'🧒' };
+
+            el.innerHTML = sorted.map(v => `
+                <div style="background:var(--white,white);border-radius:12px;padding:20px 22px;
+                            margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,0.06);
+                            border-left:5px solid #e65100;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                        <div>
+                            <div style="font-size:1rem;font-weight:800;color:var(--dark-green,#1b5e20);">
+                                ${genderIcon[v.gender]||'👤'} ${v.name}
+                            </div>
+                            <div style="font-size:0.78rem;color:#aaa;margin-top:2px;">
+                                Visited: ${v.visitDate || '—'} &nbsp;·&nbsp; ID: ${v.id}
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            ${v.reason ? `<span style="background:#fff3e0;color:#e65100;padding:4px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">${reasonLabel[v.reason]||v.reason}</span>` : ''}
+                            <button onclick="promoteToMember('${v.id}')"
+                                style="background:var(--primary-green,#2e7d32);color:white;border:none;padding:6px 12px;border-radius:7px;font-size:0.78rem;font-weight:700;cursor:pointer;">
+                                ➕ Add as Member
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;font-size:0.85rem;">
+                        ${v.phone       ? `<div><span style="color:#888;font-size:0.75rem;">📞 Phone</span><br><strong>${v.phone}</strong></div>` : ''}
+                        ${v.whatsapp    ? `<div><span style="color:#888;font-size:0.75rem;">💬 WhatsApp</span><br><strong>${v.whatsapp}</strong></div>` : ''}
+                        ${v.ageGroup    ? `<div><span style="color:#888;font-size:0.75rem;">🎂 Age Group</span><br><strong>${v.ageGroup}</strong></div>` : ''}
+                        ${v.occupation  ? `<div><span style="color:#888;font-size:0.75rem;">💼 Occupation</span><br><strong>${v.occupation}</strong></div>` : ''}
+                        ${v.address     ? `<div><span style="color:#888;font-size:0.75rem;">🏡 Address</span><br><strong>${v.address}</strong></div>` : ''}
+                        ${v.location    ? `<div style="grid-column:1/-1;"><span style="color:#888;font-size:0.75rem;">📍 Residential Location</span><br><strong>${v.location}</strong></div>` : ''}
+                    </div>
+                </div>`).join('');
+        }
+
+        // ── Promote visitor to full member ────────────────────
+        function promoteToMember(visitorId) {
+            let members = getMembers();
+            const idx   = members.findIndex(m => m.id === visitorId);
+            if (idx === -1) return;
+            if (!confirm(`Promote ${members[idx].name} to Active Member?`)) return;
+            members[idx].status = 'active';
+            members[idx].dept   = members[idx].dept === 'Visitor' ? 'Choir' : members[idx].dept;
+            saveMembers(members);
+            renderVisitorRecords();
+            renderTable(members);
+            showToast(`✅ ${members[idx].name} promoted to Active Member!`);
+        }
+
+        function showToast(msg, isError = false) {
+            let toast = document.getElementById('mmToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'mmToast';
+                toast.style.cssText = 'position:fixed;bottom:30px;right:30px;padding:14px 22px;border-radius:8px;color:white;font-weight:bold;font-size:0.9rem;z-index:4000;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:none;';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.background = isError ? '#c62828' : '#1b5e20';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3200);
+        }
+
+        // ── Member List Modal ─────────────────────────────────
+        function openMemberListModal() {
+            const members = getMembers();
+            const modal   = document.createElement('div');
+            modal.id      = 'memberListModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;padding:16px;';
+
+            const gIcon = { male:'👨', female:'👩', child:'🧒' };
+            const rows  = members.length
+                ? members.map((m,i) => `
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:10px 12px;font-size:0.82rem;color:#aaa;">${i+1}</td>
+                        <td style="padding:10px 12px;font-weight:600;font-size:0.9rem;">${m.name}</td>
+                        <td style="padding:10px 12px;font-size:0.82rem;color:#555;">${m.dept||'—'}</td>
+                        <td style="padding:10px 12px;font-size:0.82rem;">${gIcon[m.gender]||'👤'} ${m.gender||'—'}</td>
+                        <td style="padding:10px 12px;">
+                            <span style="background:${m.status==='active'?'#c8e6c9':'#fff9c4'};
+                                color:${m.status==='active'?'#2e7d32':'#f9a825'};
+                                padding:3px 8px;border-radius:12px;font-size:0.75rem;font-weight:700;">
+                                ${m.status==='active'?'Active':'Visitor'}
+                            </span>
+                        </td>
+                    </tr>`).join('')
+                : '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">No members yet.</td></tr>';
+
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:14px;width:600px;max-width:100%;
+                            max-height:85vh;overflow:hidden;display:flex;flex-direction:column;
+                            box-shadow:0 16px 48px rgba(0,0,0,0.25);">
+                    <div style="padding:18px 22px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <h2 style="color:#1b5e20;font-size:1.1rem;">👥 All Members</h2>
+                            <p style="font-size:0.8rem;color:#888;margin-top:2px;">${members.length} member${members.length!==1?'s':''} registered</p>
+                        </div>
+                        <button onclick="document.getElementById('memberListModal').remove()"
+                            style="background:#eee;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;">✕ Close</button>
+                    </div>
+                    <div style="padding:12px 22px;border-bottom:1px solid #eee;">
+                        <input type="text" placeholder="Search members..." oninput="filterMemberModal(this.value)"
+                            style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9rem;outline:none;background:#fff;color:#222;">
+                    </div>
+                    <div style="overflow-y:auto;flex:1;">
+                        <table style="width:100%;border-collapse:collapse;">
+                            <thead style="position:sticky;top:0;background:#f9f9f9;">
+                                <tr>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">#</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Name</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Department</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Gender</th>
+                                    <th style="padding:10px 12px;text-align:left;font-size:0.78rem;color:#888;border-bottom:2px solid #eee;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="memberModalBody">${rows}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        function filterMemberModal(q) {
+            document.querySelectorAll('#memberModalBody tr').forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
             });
         }
 
-        // ── Modal helpers ─────────────────────────────────────
-        let editingId  = null;
-        let deletingId = null;
+        // ── Birthday Tracker ──────────────────────────────────
+        function loadBirthdays() {
+            const members = getMembers();
+            const now     = new Date();
+            const upcoming = [];
 
+            members.forEach(m => {
+                if (!m.dob) return;
+                const dob  = new Date(m.dob);
+                const bday = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
+                if (bday < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+                    bday.setFullYear(now.getFullYear() + 1);
+                }
+                const days = Math.round((bday - now) / 86400000);
+                if (days <= 30) upcoming.push({ name: m.name, dob: m.dob, days });
+            });
+
+            upcoming.sort((a, b) => a.days - b.days);
+
+            const el = document.getElementById('birthdayList');
+            if (!upcoming.length) {
+                el.innerHTML = '<span style="color:#999;">No upcoming birthdays in the next 30 days.</span>';
+                return;
+            }
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            el.innerHTML = upcoming.map(u => {
+                const d = new Date(u.dob);
+                const label = u.days === 0 ? '🎉 Today!' : u.days === 1 ? 'Tomorrow' : `In ${u.days} days`;
+                const color = u.days === 0 ? '#c2185b' : u.days <= 3 ? '#e65100' : '#555';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;
+                            padding:7px 0;border-bottom:1px solid var(--border,#eee);">
+                    <span>🎂 <strong>${u.name}</strong> &nbsp;<span style="color:#999;font-size:0.8rem;">${d.getDate()} ${months[d.getMonth()]}</span></span>
+                    <span style="color:${color};font-weight:bold;font-size:0.82rem;">${label}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // ── QR Code Viewer ────────────────────────────────────
+        function viewQR(memberId, memberName) {
+            const members = getMembers();
+            const m = members.find(x => x.id === memberId);
+            if (!m) return;
+
+            const payload = JSON.stringify({ type: 'ICGC_MEMBER', id: m.id, name: m.name });
+
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:5000;display:flex;justify-content:center;align-items:center;';
+            modal.innerHTML = `
+                <div style="background:var(--card-bg,white);border-radius:16px;padding:28px 24px;width:320px;max-width:95%;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,0.3);">
+                    <div style="font-size:0.72rem;color:#999;font-family:monospace;margin-bottom:4px;">#${m.id}</div>
+                    <h2 style="color:var(--dark-green,#1b5e20);margin-bottom:3px;font-size:1.1rem;">${m.name}</h2>
+                    <div style="font-size:0.82rem;color:#888;margin-bottom:18px;">${m.dept || '—'}</div>
+                    <div id="modalQRBox" style="width:200px;height:200px;margin:0 auto 18px;"></div>
+                    <p style="font-size:0.78rem;color:#aaa;margin-bottom:16px;">Member scans this QR at the entrance to mark attendance</p>
+                    <div style="display:flex;gap:10px;">
+                        <button id="dlQRBtn" style="flex:1;background:#1b5e20;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;">⬇ Download</button>
+                        <button onclick="this.closest('div[style]').remove()" style="flex:1;background:#eee;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;">Close</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+
+            // Generate QR
+            new QRCode(document.getElementById('modalQRBox'), {
+                text: payload, width: 200, height: 200,
+                colorDark: '#1b5e20', colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            // Download button
+            document.getElementById('dlQRBtn').onclick = () => {
+                const canvas = document.getElementById('modalQRBox').querySelector('canvas');
+                if (!canvas) return;
+                const a = document.createElement('a');
+                a.download = `ICGC_QR_${m.name.replace(/\s+/g,'_')}.png`;
+                a.href     = canvas.toDataURL('image/png');
+                a.click();
+            };
+
+            // Close on backdrop click
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        // ── Tithe Tracker per Member ──────────────────────────
+        function viewTithes(memberId, memberName) {
+            const txList = JSON.parse(localStorage.getItem('icgc_transactions') || '[]');
+            const tithes = txList.filter(t => !t.expense && t.category === 'Tithe'
+                && t.desc.toLowerCase().includes(memberName.toLowerCase()));
+
+            const total = tithes.reduce((s, t) => s + t.amount, 0);
+            const fmt   = n => 'GHS ' + n.toLocaleString('en-GH', {minimumFractionDigits:2});
+
+            const rows = tithes.length
+                ? tithes.map(t => `<tr><td style="padding:7px;border-bottom:1px solid #eee;">${t.date}</td>
+                    <td style="padding:7px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:bold;">+${fmt(t.amount)}</td></tr>`).join('')
+                : '<tr><td colspan="2" style="padding:14px;text-align:center;color:#999;">No tithe records found.<br><small>Tithe records matching this member\'s name will appear here.</small></td></tr>';
+
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;';
+            modal.innerHTML = `
+                <div style="background:var(--card-bg,white);border-radius:12px;padding:24px;width:400px;max-width:95%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+                    <h2 style="color:var(--dark-green,#1b5e20);margin-bottom:6px;font-size:1.1rem;">💰 Tithe History</h2>
+                    <p style="color:#999;font-size:0.85rem;margin-bottom:14px;">${memberName}</p>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead><tr>
+                            <th style="text-align:left;padding:7px;border-bottom:2px solid #e8f5e9;color:#1b5e20;">Date</th>
+                            <th style="text-align:left;padding:7px;border-bottom:2px solid #e8f5e9;color:#1b5e20;">Amount</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    ${tithes.length ? `<div style="margin-top:14px;padding:12px;background:#e8f5e9;border-radius:8px;font-weight:bold;color:#1b5e20;">Total: ${fmt(total)}</div>` : ''}
+                    <button onclick="this.closest('div[style]').remove()" style="margin-top:16px;width:100%;padding:10px;background:#eee;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">Close</button>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+
+        // ── Init on page load ─────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                applyTheme();
+                applySettings();
+                setAutoDate();
+                const members = loadMembers();
+                renderTable(members);
+                updateStatCards(members);
+                loadBirthdays();
+            } catch(err) {
+                console.error('Init error:', err);
+                // Retry stat cards after a short delay as fallback
+                setTimeout(() => {
+                    try {
+                        const m = getMembers();
+                        updateStatCards(m);
+                    } catch(e) {}
+                }, 200);
+            }
+        });
+
+        // ── Cross-tab / cross-page sync ───────────────────────
+        // If scanner.html or attendance.html writes to icgc_members,
+        // this page auto-refreshes its stats without needing a reload
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'icgc_members') {
+                try {
+                    const members = getMembers();
+                    renderTable(members);
+                    updateStatCards(members);
+                    loadBirthdays();
+                } catch(err) { console.error('Storage sync error:', err); }
+            }
+        });
+
+        // ── Modal state ──────────────────────────────────────
+        let editingId   = null;
+        let deletingId  = null;
+
+        // ── Open ADD modal ───────────────────────────────────
         function openModal() {
             editingId = null;
             document.getElementById('modalTitle').textContent = 'Add New Member';
@@ -1102,24 +1402,25 @@
             document.getElementById('memberModal').classList.remove('active');
         }
 
-        async function editRow(btn) {
+        // ── Open EDIT modal ───────────────────────────────────
+        function editRow(btn) {
             const row = btn.closest('tr');
-            editingId  = row.dataset.id;
-            const members = await getMembers();
+            editingId = row.dataset.id;
+            const members = getMembers();
             const m = members.find(x => x.id === editingId);
             if (!m) return;
             document.getElementById('modalTitle').textContent = 'Edit Member';
             document.getElementById('saveBtn').textContent   = 'Update Member';
             document.getElementById('newName').value   = m.name;
-            document.getElementById('newPhone').value  = m.phone||'';
-            document.getElementById('newDept').value   = m.dept||'';
-            document.getElementById('newGender').value = m.gender||'male';
-            document.getElementById('newDOB').value    = m.dob||'';
-            document.getElementById('newStatus').value = m.status||'active';
+            document.getElementById('newPhone').value  = m.phone;
+            document.getElementById('newDept').value   = m.dept;
+            document.getElementById('newGender').value = m.gender || 'male';
+            document.getElementById('newDOB').value    = m.dob || '';
+            document.getElementById('newStatus').value = m.status;
             document.getElementById('memberModal').classList.add('active');
         }
 
-        async function saveMember() {
+        function saveMember() {
             const name   = document.getElementById('newName').value.trim();
             const phone  = document.getElementById('newPhone').value.trim();
             const dept   = document.getElementById('newDept').value;
@@ -1127,167 +1428,49 @@
             const dob    = document.getElementById('newDOB').value;
             const status = document.getElementById('newStatus').value;
             if (!name || !phone) { alert('Please fill in the name and phone number.'); return; }
-            showSaving(true);
-            try {
-                if (editingId) {
-                    await updateMemberInDB({ id: editingId, name, phone, dept, gender, dob, status });
-                    logActivity(`✏️ Member updated: ${name}`, 'member');
-                } else {
-                    const id = `ICGC-${Date.now()}`;
-                    await saveMemberToDB({ id, name, phone, dept, gender, dob, status });
-                    logActivity(`👤 New member added: ${name}`, 'member');
-                }
-                const members = await getMembers();
-                await renderTable(members);
-                loadBirthdays(members);
-                closeModal();
-                showToast(editingId ? '✅ Member updated!' : '✅ Member added!');
-            } catch(err) {
-                alert('Error saving member: ' + err.message);
-            } finally { showSaving(false); }
+            let members = getMembers();
+            if (editingId) {
+                members = members.map(m => m.id === editingId ? { ...m, name, phone, dept, gender, dob, status } : m);
+            } else {
+                members.push({ id: nextId(), name, phone, dept, gender, dob, status });
+            }
+            saveMembers(members);
+            logActivity(editingId ? `✏️ Member updated: ${name}` : `👤 New member added: ${name}`, 'member');
+            renderTable(members);
+            loadBirthdays();
+            closeModal();
         }
 
+        // ── Delete ────────────────────────────────────────────
         function deleteRow(btn) {
-            const row  = btn.closest('tr');
+            const row = btn.closest('tr');
             deletingId = row.dataset.id;
-            const name = row.querySelectorAll('td')[0].textContent.trim();
-            document.getElementById('deleteTargetName').textContent = name;
+            const members = getMembers();
+            const m = members.find(x => x.id === deletingId);
+            document.getElementById('deleteName').textContent = m ? m.name : '';
             document.getElementById('deleteModal').classList.add('active');
+        }
+
+        function confirmDelete() {
+            if (deletingId) {
+                const members = getMembers().filter(m => m.id !== deletingId);
+                logActivity(`🗑️ Member removed from directory`, "member");
+                saveMembers(members);
+                renderTable(members);
+                deletingId = null;
+            }
+            closeDeleteModal();
         }
 
         function closeDeleteModal() {
             document.getElementById('deleteModal').classList.remove('active');
         }
 
-        async function confirmDelete() {
-            if (!deletingId) return;
-            showSaving(true);
-            try {
-                await deleteMemberFromDB(deletingId);
-                logActivity('🗑️ Member removed', 'member');
-                const members = await getMembers();
-                await renderTable(members);
-                loadBirthdays(members);
-                showToast('🗑️ Member removed.');
-            } catch(err) { alert('Error deleting: ' + err.message); }
-            finally { showSaving(false); deletingId = null; }
-            closeDeleteModal();
-        }
-
-        // ── Search ────────────────────────────────────────────
+        // ── Search filter ─────────────────────────────────────
         function filterTable(query) {
             const rows = document.querySelectorAll('#memberBody tr');
             rows.forEach(row => {
                 row.style.display = row.innerText.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
-            });
-        }
-
-        // ── Birthdays ─────────────────────────────────────────
-        async function loadBirthdays(members) {
-            if (!members || !members.length) members = await getMembers();
-            const now = new Date();
-            const upcoming = [];
-            members.forEach(m => {
-                if (!m.dob) return;
-                const dob  = new Date(m.dob);
-                const bday = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
-                if (bday < now) bday.setFullYear(now.getFullYear() + 1);
-                const days = Math.round((bday - now) / 86400000);
-                if (days <= 30) upcoming.push({ name: m.name, dob: m.dob, days });
-            });
-            upcoming.sort((a,b) => a.days - b.days);
-            const el = document.getElementById('birthdayList');
-            if (!el) return;
-            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            el.innerHTML = !upcoming.length
-                ? '<span style="color:#999;">No upcoming birthdays in the next 30 days.</span>'
-                : upcoming.map(u => {
-                    const d = new Date(u.dob);
-                    const label = u.days===0?'🎉 Today!':u.days===1?'Tomorrow':`In ${u.days} days`;
-                    const color = u.days===0?'#c2185b':u.days<=3?'#e65100':'#555';
-                    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #eee;">
-                        <span>🎂 <strong>${u.name}</strong> &nbsp;<span style="color:#999;font-size:0.8rem;">${d.getDate()} ${months[d.getMonth()]}</span></span>
-                        <span style="color:${color};font-weight:bold;font-size:0.82rem;">${label}</span>
-                    </div>`;
-                }).join('');
-        }
-
-        // ── Tithe History ─────────────────────────────────────
-        async function viewTithes(memberId, memberName) {
-            const txList = await sbFetch('transactions?expense=eq.false&category=eq.Tithe&order=created_at.desc');
-            const tithes = txList.filter(t => t.description.toLowerCase().includes(memberName.toLowerCase()));
-            const total  = tithes.reduce((s, t) => s + parseFloat(t.amount), 0);
-            const fmt    = n => 'GHS ' + n.toLocaleString('en-GH', {minimumFractionDigits:2});
-            const rows   = tithes.length
-                ? tithes.map(t => `<tr><td style="padding:7px;border-bottom:1px solid #eee;">${t.tx_date}</td>
-                    <td style="padding:7px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:bold;">+${fmt(parseFloat(t.amount))}</td></tr>`).join('')
-                : '<tr><td colspan="2" style="padding:14px;text-align:center;color:#999;">No tithe records found.</td></tr>';
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;padding:16px;';
-            modal.innerHTML = `<div style="background:#fff;border-radius:12px;padding:24px;width:400px;max-width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.2);">
-                <h2 style="color:#1b5e20;margin-bottom:6px;font-size:1.1rem;">💰 Tithe History</h2>
-                <p style="color:#999;font-size:0.85rem;margin-bottom:14px;">${memberName}</p>
-                <table style="width:100%;border-collapse:collapse;">
-                    <thead><tr><th style="text-align:left;padding:7px;border-bottom:2px solid #e8f5e9;color:#1b5e20;">Date</th>
-                    <th style="text-align:left;padding:7px;border-bottom:2px solid #e8f5e9;color:#1b5e20;">Amount</th></tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
-                ${tithes.length ? `<div style="margin-top:14px;padding:12px;background:#e8f5e9;border-radius:8px;font-weight:bold;color:#1b5e20;">Total: ${fmt(total)}</div>` : ''}
-                <button onclick="this.closest('div[style]').remove()" style="margin-top:16px;width:100%;padding:10px;background:#eee;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">Close</button>
-            </div>`;
-            document.body.appendChild(modal);
-            modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
-        }
-
-        // ── Member List Modal ─────────────────────────────────
-        async function openMemberListModal() {
-            const members = await getMembers();
-            const modal   = document.createElement('div');
-            modal.id      = 'memberListModal';
-            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:5000;display:flex;justify-content:center;align-items:center;padding:16px;';
-            const gIcon = { male:'👨', female:'👩', child:'🧒' };
-            const rows  = members.length
-                ? members.map((m,i) => `<tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:9px 12px;font-size:0.82rem;color:#aaa;">${i+1}</td>
-                    <td style="padding:9px 12px;font-weight:600;font-size:0.88rem;">${m.name}</td>
-                    <td style="padding:9px 12px;font-size:0.8rem;color:#555;">${m.dept||'—'}</td>
-                    <td style="padding:9px 12px;font-size:0.8rem;">${gIcon[m.gender]||'👤'} ${m.gender||'—'}</td>
-                    <td style="padding:9px 12px;"><span style="background:${m.status==='active'?'#c8e6c9':'#fff9c4'};color:${m.status==='active'?'#2e7d32':'#f9a825'};padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;">${m.status==='active'?'Active':'Visitor'}</span></td>
-                  </tr>`).join('')
-                : '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">No members yet.</td></tr>';
-            modal.innerHTML = `
-                <div style="background:#fff;border-radius:14px;width:600px;max-width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.25);">
-                    <div style="padding:16px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
-                        <div><h2 style="color:#1b5e20;font-size:1.05rem;">👥 All Members</h2>
-                        <p style="font-size:0.78rem;color:#888;margin-top:2px;">${members.length} member${members.length!==1?'s':''}</p></div>
-                        <button onclick="document.getElementById('memberListModal').remove()" style="background:#eee;border:none;border-radius:8px;padding:7px 14px;font-weight:700;cursor:pointer;">✕</button>
-                    </div>
-                    <div style="padding:10px 18px;border-bottom:1px solid #eee;">
-                        <input type="text" placeholder="Search..." oninput="filterMemberModal(this.value)"
-                            style="width:100%;padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88rem;outline:none;background:#fff;color:#222;">
-                    </div>
-                    <div style="overflow-y:auto;flex:1;">
-                        <table style="width:100%;border-collapse:collapse;">
-                            <thead style="position:sticky;top:0;background:#f9f9f9;">
-                                <tr>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">#</th>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Name</th>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Dept</th>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Gender</th>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="memberModalBody">${rows}</tbody>
-                        </table>
-                    </div>
-                </div>`;
-            document.body.appendChild(modal);
-            modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
-        }
-
-        function filterMemberModal(q) {
-            document.querySelectorAll('#memberModalBody tr').forEach(row => {
-                row.style.display = row.innerText.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
             });
         }
 
@@ -1296,162 +1479,34 @@
             const t = localStorage.getItem('icgc_theme') || 'light';
             document.documentElement.setAttribute('data-theme', t);
             const btn = document.getElementById('darkBtn');
-            if (btn) btn.textContent = t==='dark' ? '☀ Light' : '🌙 Dark';
+            if (btn) btn.textContent = t === 'dark' ? '☀ Light' : '🌙 Dark';
         }
         function toggleDark() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const next   = isDark ? 'light' : 'dark';
+            const next = isDark ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);
             localStorage.setItem('icgc_theme', next);
             const btn = document.getElementById('darkBtn');
-            if (btn) btn.textContent = next==='dark' ? '☀ Light' : '🌙 Dark';
-        }
-
-        // ── Auto Date ─────────────────────────────────────────
-        function setAutoDate() {
-            const now = new Date();
-            const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-            const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-            const d = now.getDate();
-            const s = (d%10===1&&d!==11)?'st':(d%10===2&&d!==12)?'nd':(d%10===3&&d!==13)?'rd':'th';
-            const el = document.getElementById('currentDate');
-            if (el) el.textContent = `${days[now.getDay()]}, ${d}${s} ${months[now.getMonth()]} ${now.getFullYear()}`;
-        }
-
-        // ── Settings ──────────────────────────────────────────
-        function applySettings() {
-            const s  = JSON.parse(localStorage.getItem('icgc_settings') || '{}');
-            const bn = document.getElementById('sidebarBranch');
-            const sn = document.getElementById('sidebarName');
-            if (bn && s.churchName) bn.textContent = s.churchName;
-            if (sn && s.adminName)  sn.textContent = s.adminName + ' Admin';
+            if (btn) btn.textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
         }
 
         // ── Activity Logger ───────────────────────────────────
         function logActivity(msg, type) {
             const list = JSON.parse(localStorage.getItem('icgc_activity') || '[]');
-            list.push({ msg, type: type||'member', ts: Date.now() });
+            list.push({ msg, type: type || 'member', ts: Date.now() });
             if (list.length > 50) list.splice(0, list.length - 50);
             localStorage.setItem('icgc_activity', JSON.stringify(list));
         }
 
-        // ── Toast ─────────────────────────────────────────────
-        function showToast(msg, isError=false) {
-            let toast = document.getElementById('mmToast');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = 'mmToast';
-                toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);padding:12px 22px;border-radius:8px;color:white;font-weight:bold;font-size:0.88rem;z-index:9000;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:none;white-space:nowrap;';
-                document.body.appendChild(toast);
-            }
-            toast.textContent = msg;
-            toast.style.background = isError ? '#c62828' : '#1b5e20';
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        // ── Settings (church name in sidebar) ────────────────
+        function applySettings() {
+            const s = JSON.parse(localStorage.getItem('icgc_settings') || '{}');
+            const bn = document.getElementById('sidebarBranch');
+            const sn = document.getElementById('sidebarName');
+            if (bn && s.churchName) bn.textContent  = s.churchName;
+            if (sn && s.adminName)  sn.textContent  = s.adminName + ' Admin';
         }
 
-        // ── Logout ────────────────────────────────────────────
-        function confirmLogout()    { document.getElementById('logoutModal').classList.add('active'); }
-        function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('active'); }
-        async function doLogout() {
-            try {
-                const session = localStorage.getItem('icgc_session');
-                if (session) {
-                    const s = JSON.parse(session);
-                    if (s.access_token) {
-                        await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-                            method: 'POST',
-                            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${s.access_token}` }
-                        });
-                    }
-                }
-            } catch(e) {}
-            localStorage.removeItem('icgc_session');
-            window.location.href = 'l1.html';
-        }
-
-        // ── Visitor Records Tab ───────────────────────────────
-        function switchDirTab(tab) {
-            const pm = document.getElementById('panelMembers');
-            const pv = document.getElementById('panelVisitors');
-            const bm = document.getElementById('tabMembers');
-            const bv = document.getElementById('tabVisitors');
-            if (tab === 'members') {
-                pm.style.display = ''; pv.style.display = 'none';
-                bm.style.background = 'var(--primary-green,#2e7d32)'; bm.style.color = 'white'; bm.style.border = 'none';
-                bv.style.background = 'white'; bv.style.color = '#e65100'; bv.style.border = '2px solid #e65100';
-            } else {
-                pm.style.display = 'none'; pv.style.display = '';
-                bv.style.background = '#e65100'; bv.style.color = 'white'; bv.style.border = 'none';
-                bm.style.background = 'white'; bm.style.color = 'var(--primary-green,#2e7d32)'; bm.style.border = '2px solid var(--primary-green,#2e7d32)';
-                renderVisitorRecords();
-            }
-        }
-
-        async function renderVisitorRecords() {
-            const members  = await getMembers();
-            const visitors = members.filter(m => m.status === 'visitor');
-            const el       = document.getElementById('visitorRecordsList');
-            if (!el) return;
-            if (!visitors.length) {
-                el.innerHTML = `<div style="text-align:center;padding:40px;color:#999;">
-                    <div style="font-size:2.5rem;margin-bottom:12px;">🙋</div>
-                    <p style="font-weight:600;">No visitor forms submitted yet.</p>
-                </div>`; return;
-            }
-            el.innerHTML = visitors.map(v => `
-                <div style="background:white;border-radius:12px;padding:18px;margin-bottom:12px;border-left:5px solid #e65100;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                        <div>
-                            <div style="font-weight:800;color:#1b5e20;">${v.name}</div>
-                            <div style="font-size:0.78rem;color:#aaa;margin-top:2px;">ID: ${v.id}</div>
-                        </div>
-                        <button onclick="promoteToMember('${v.id}')"
-                            style="background:#2e7d32;color:white;border:none;padding:6px 12px;border-radius:7px;font-size:0.78rem;font-weight:700;cursor:pointer;">
-                            ➕ Add as Member
-                        </button>
-                    </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;font-size:0.85rem;">
-                        ${v.phone ? `<div><span style="color:#888;font-size:0.75rem;">📞 Phone</span><br><strong>${v.phone}</strong></div>` : ''}
-                        ${v.dept  ? `<div><span style="color:#888;font-size:0.75rem;">🏛 Dept</span><br><strong>${v.dept}</strong></div>` : ''}
-                    </div>
-                </div>`).join('');
-        }
-
-        async function promoteToMember(visitorId) {
-            const members = await getMembers();
-            const m = members.find(x => x.id === visitorId);
-            if (!m || !confirm(`Promote ${m.name} to Active Member?`)) return;
-            showSaving(true);
-            try {
-                await updateMemberInDB({ ...m, status: 'active', dept: m.dept||'Choir' });
-                await renderVisitorRecords();
-                const updated = await getMembers();
-                await renderTable(updated);
-                showToast(`✅ ${m.name} promoted to Active Member!`);
-            } catch(err) { alert('Error: ' + err.message); }
-            finally { showSaving(false); }
-        }
-
-        // ── Init ──────────────────────────────────────────────
-        document.addEventListener('DOMContentLoaded', async () => {
-            applyTheme();
-            applySettings();
-            setAutoDate();
-            showSaving(true);
-            try {
-                const members = await getMembers();
-                await renderTable(members);
-                loadBirthdays(members);
-            } catch(err) {
-                console.error('Init error:', err);
-                showToast('⚠️ Could not load members. Check internet connection.', true);
-            } finally { showSaving(false); }
-        });
-
-        setInterval(async () => {
-            try { const m = await getMembers(); await renderTable(m); } catch(e) {}
-        }, 30000);
     </script>
 
 
