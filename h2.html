@@ -186,7 +186,7 @@
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <img src="ICGCNCT.png" alt="Logo">
+        <img src="ICGCNCT.PNG" alt="Logo">
         <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
     </div>
@@ -293,6 +293,25 @@
 <div class="toast" id="toast"></div>
 
 <script>
+    // ── Supabase ──────────────────────────────────────────
+    const SUPABASE_URL = 'https://negrfzkejqfmswxnfiyk.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8';
+
+    async function sbFetch(path, method='GET', body=null, extra='') {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${extra}`, {
+            method,
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': method==='POST' ? 'return=representation' : ''
+            },
+            body: body ? JSON.stringify(body) : null
+        });
+        if (!res.ok) { const e = await res.text(); throw new Error(e); }
+        const t = await res.text(); return t ? JSON.parse(t) : [];
+    }
+
     // ── Sidebar ───────────────────────────────────────────
     function toggleSidebar() {
         document.getElementById('sidebar').classList.toggle('active');
@@ -502,7 +521,13 @@
             const alerts = inv.filter(a => a.condition==='repair'||a.condition==='missing').length;
             document.getElementById('statAlerts').textContent =
                 alerts ? alerts + (alerts===1?' Item':' Items') : 'None';
-        } catch(err) { console.error('Stats error:', err); }
+        } catch(err) {
+            console.error('Stats error:', err);
+            document.getElementById('statMembers').textContent    = '⚠️';
+            document.getElementById('statTithes').textContent     = '⚠️';
+            document.getElementById('statAttendance').textContent = '⚠️';
+            document.getElementById('statAlerts').textContent     = '⚠️';
+        }
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
