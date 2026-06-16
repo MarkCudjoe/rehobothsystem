@@ -149,7 +149,29 @@
     </style>
 </head>
 <body>
-
+<script>
+    (function() {
+        const session = localStorage.getItem('icgc_session');
+        if (!session) { window.location.href = 'l1.html'; return; }
+        try {
+            const s = JSON.parse(session);
+            if (s.expires_at < Date.now()) {
+                localStorage.removeItem('icgc_session');
+                window.location.href = 'l1.html';
+            }
+            window.addEventListener('DOMContentLoaded', () => {
+                const nameEl = document.getElementById('sidebarName');
+                if (nameEl && s.user?.name) nameEl.textContent = s.user.name;
+                const roleEl = document.getElementById('sidebarBranch');
+                if (roleEl) roleEl.textContent = s.user?.role === 'superadmin' ? '👑 Super Admin' : '👤 Staff';
+            });
+        } catch(e) {
+            localStorage.removeItem('icgc_session');
+            localStorage.removeItem('icgc_session');
+            window.location.href = 'l1.html';
+        }
+    })();
+</script>
 <div id="overlay" onclick="toggleSidebar()"></div>
 
 <!-- Top Bar -->
@@ -164,7 +186,7 @@
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <img src="ICGCNCT.png" alt="Logo">
+        <img src="ICGCNCT.PNG" alt="Logo">
         <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
     </div>
@@ -302,53 +324,6 @@
         document.getElementById('currentDate').textContent = `${days[now.getDay()]}, ${d}${s} ${months[now.getMonth()]} ${now.getFullYear()}`;
     }
 
-    // ── Stats ─────────────────────────────────────────────
-    function loadStats() {
-        const members   = JSON.parse(localStorage.getItem('icgc_members')              || '[]');
-        const txList    = JSON.parse(localStorage.getItem('icgc_transactions')          || '[]');
-        const sessions  = JSON.parse(localStorage.getItem('icgc_attendance_sessions')  || '[]');
-        const inventory = JSON.parse(localStorage.getItem('icgc_inventory')             || '[]');
-        const now       = new Date();
-
-        // Total members
-        document.getElementById('statMembers').textContent = members.length || '0';
-
-        // Tithes this month
-        const tithes = txList
-            .filter(t => !t.expense && t.category === 'Tithe' &&
-                new Date(t.date).getMonth() === now.getMonth() &&
-                new Date(t.date).getFullYear() === now.getFullYear())
-            .reduce((s, t) => s + t.amount, 0);
-        document.getElementById('statTithes').textContent =
-            'GHS ' + tithes.toLocaleString('en-GH', {minimumFractionDigits:2});
-
-        // Attendance — show today's present count or roll size
-        const todayStr  = now.toISOString().slice(0,10);
-        const todaySess = sessions.find(s => s.date === todayStr);
-        const attText   = todaySess
-            ? todaySess.attendance.filter(a => a.present).length + ' Present Today'
-            : members.length + ' on Roll';
-        document.getElementById('statAttendance').textContent = attText;
-
-        // Inventory alerts
-        const alerts = inventory.filter(a =>
-            a.condition === 'repair' || a.condition === 'missing' ||
-            (a.minQty && parseInt(a.qty) < parseInt(a.minQty))
-        ).length;
-        document.getElementById('statAlerts').textContent =
-            alerts ? alerts + (alerts === 1 ? ' Item' : ' Items') : 'None';
-    }
-
-    // ── Auto-refresh dashboard when any page saves data ───
-    window.addEventListener('storage', (e) => {
-        const watched = ['icgc_members','icgc_transactions','icgc_inventory',
-                         'icgc_attendance_sessions','icgc_activity'];
-        if (watched.includes(e.key)) {
-            loadStats();
-            loadActivity();
-        }
-    });
-
     // ── Activity Feed ─────────────────────────────────────
     function loadActivity() {
         const events = JSON.parse(localStorage.getItem('icgc_activity') || '[]');
@@ -474,9 +449,27 @@
     }
 
     // ── Logout ────────────────────────────────────────────
-    function confirmLogout()   { document.getElementById('logoutModal').classList.add('active'); }
-    function closeLogoutModal(){ document.getElementById('logoutModal').classList.remove('active'); }
-    function doLogout()        { location.href = 'l1.html'; }
+    function confirmLogout()    { document.getElementById('logoutModal').classList.add('active'); }
+    function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('active'); }
+    async function doLogout() {
+        try {
+            const session = localStorage.getItem('icgc_session');
+            if (session) {
+                const s = JSON.parse(session);
+                if (s.access_token) {
+                    await fetch('https://negrfzkejqfmswxnfiyk.supabase.co/auth/v1/logout', {
+                        method: 'POST',
+                        headers: {
+                            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8',
+                            'Authorization': `Bearer ${s.access_token}`
+                        }
+                    });
+                }
+            }
+        } catch(e) { console.log('Logout error:', e); }
+        localStorage.removeItem('icgc_session');
+        window.location.href = 'l1.html';
+    }
 
     // ── Toast ─────────────────────────────────────────────
     function showToast(msg, err=false) {
@@ -487,9 +480,36 @@
     }
 
     // ── Init ──────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
-        applyTheme(); setAutoDate(); loadStats(); loadActivity(); loadNotes(); applySettings();
+    async function loadStats() {
+        try {
+            const members = await sbFetch('members?select=id,status');
+            document.getElementById('statMembers').textContent = members.length || '0';
+
+            const now = new Date();
+            const txList = await sbFetch('transactions?expense=eq.false&category=eq.Tithe');
+            const monthTithes = txList.reduce((sum, t) => {
+                const d = new Date(t.tx_date);
+                return (d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear())
+                    ? sum + parseFloat(t.amount) : sum;
+            }, 0);
+            document.getElementById('statTithes').textContent =
+                'GHS ' + monthTithes.toLocaleString('en-GH', {minimumFractionDigits:2});
+
+            document.getElementById('statAttendance').textContent =
+                members.length + ' Members';
+
+            const inv = await sbFetch('inventory?select=id,condition');
+            const alerts = inv.filter(a => a.condition==='repair'||a.condition==='missing').length;
+            document.getElementById('statAlerts').textContent =
+                alerts ? alerts + (alerts===1?' Item':' Items') : 'None';
+        } catch(err) { console.error('Stats error:', err); }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        applyTheme(); applySettings(); setAutoDate();
+        await loadStats(); loadActivity(); loadNotes();
     });
+    setInterval(loadStats, 30000);
 </script>
 </body>
 </html>
