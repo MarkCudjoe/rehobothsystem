@@ -147,6 +147,7 @@
             });
         } catch(e) {
             localStorage.removeItem('icgc_session');
+            localStorage.removeItem('icgc_session');
             window.location.href = 'l1.html';
         }
     })();
@@ -164,7 +165,7 @@
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <img src="ICGCNCT.png" alt="Logo">
+        <img src="ICGCNCT.PNG" alt="Logo">
         <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
     </div>
@@ -786,18 +787,21 @@
     function confirmLogout()    { document.getElementById('logoutModal').classList.add('active'); }
     function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('active'); }
     async function doLogout() {
-        const session = localStorage.getItem('icgc_session');
-        if (session) {
-            try {
+        try {
+            const session = localStorage.getItem('icgc_session');
+            if (session) {
                 const s = JSON.parse(session);
                 if (s.access_token) {
                     await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-                        method:'POST',
-                        headers:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${s.access_token}`}
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${s.access_token}`
+                        }
                     });
                 }
-            } catch(e) {}
-        }
+            }
+        } catch(e) { console.log('Logout error:', e); }
         localStorage.removeItem('icgc_session');
         window.location.href = 'l1.html';
     }
