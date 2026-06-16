@@ -743,11 +743,37 @@
     </div>
 </div>
 
+
+<script>
+    // ── Session Guard ─────────────────────────────────────
+    (function() {
+        const session = localStorage.getItem('icgc_session');
+        if (!session) { window.location.href = 'l1.html'; return; }
+        try {
+            const s = JSON.parse(session);
+            if (s.expires_at < Date.now()) {
+                localStorage.removeItem('icgc_session');
+                window.location.href = 'l1.html';
+            }
+            // Show user name in sidebar if available
+            window.addEventListener('DOMContentLoaded', () => {
+                const nameEl = document.getElementById('sidebarName');
+                if (nameEl && s.user?.name) nameEl.textContent = s.user.name;
+                const roleEl = document.getElementById('sidebarBranch');
+                if (roleEl) roleEl.textContent = s.user?.role === 'superadmin' ? '👑 Super Admin' : '👤 Staff';
+            });
+        } catch(e) {
+            localStorage.removeItem('icgc_session');
+            window.location.href = 'l1.html';
+        }
+    })();
+</script>
+
 <div id="overlay" onclick="toggleSidebar()"></div>
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -997,45 +1023,45 @@
         }
 
         // ── localStorage helpers ──────────────────────────────
-        const TX_KEY = 'icgc_transactions';
+        // ── Supabase Configuration ────────────────────────────
+        const SUPABASE_URL = 'https://negrfzkejqfmswxnfiyk.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8';
 
-        // Old seed descriptions to detect stale data
-        const SEED_DESCS = ['Kofi Mensah','Electricity Bill','Special Seed','Sunday Service','Benevolence Fund'];
+        async function sbFetch(path, method='GET', body=null, extra='') {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${extra}`, {
+                method,
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': method==='POST' ? 'return=representation' : ''
+                },
+                body: body ? JSON.stringify(body) : null
+            });
+            if (!res.ok) { const e = await res.text(); throw new Error(e); }
+            const t = await res.text(); return t ? JSON.parse(t) : [];
+        }
 
-        function loadTx() {
-            const raw = localStorage.getItem(TX_KEY);
-            if (!raw) {
-                localStorage.setItem(TX_KEY, JSON.stringify([]));
-                return [];
+        function showSaving(on) {
+            let el = document.getElementById('savingInd');
+            if (!el) {
+                el = document.createElement('div'); el.id='savingInd';
+                el.style.cssText='position:fixed;top:60px;right:16px;background:#1b5e20;color:white;padding:8px 16px;border-radius:8px;font-size:0.82rem;font-weight:700;z-index:9999;display:none;';
+                el.textContent='💾 Saving...'; document.body.appendChild(el);
             }
-            let list = JSON.parse(raw);
-            // If ALL items are seed data, clear them
-            const allSeed = list.length > 0 && list.every(t => SEED_DESCS.includes(t.desc));
-            if (allSeed) {
-                localStorage.setItem(TX_KEY, JSON.stringify([]));
-                return [];
-            }
-            // Remove individual seed items mixed with real data
-            const cleaned = list.filter(t => !SEED_DESCS.includes(t.desc));
-            if (cleaned.length !== list.length) {
-                localStorage.setItem(TX_KEY, JSON.stringify(cleaned));
-                return cleaned;
-            }
-            return list;
+            el.style.display = on ? 'block' : 'none';
         }
 
-        function saveTx(list) {
-            localStorage.setItem(TX_KEY, JSON.stringify(list));
+        // ── Transaction helpers ───────────────────────────────
+        async function getTx() {
+            const rows = await sbFetch('transactions?order=created_at.desc');
+            return rows.map(r => ({
+                id: r.id, date: r.tx_date, category: r.category,
+                desc: r.description, amount: parseFloat(r.amount), expense: r.expense
+            }));
         }
 
-        function getTx() {
-            return JSON.parse(localStorage.getItem(TX_KEY) || '[]');
-        }
-
-        function nextTxId() {
-            const list = getTx();
-            return list.length ? Math.max(...list.map(t => t.id)) + 1 : 1;
-        }
+// nextTxId handled by Supabase identity column
 
         // ── Formatting helpers ────────────────────────────────
         function fmt(n) {
@@ -1062,8 +1088,8 @@
         }
 
         // ── Render table + update summary cards ───────────────
-        function renderAll() {
-            const list = getTx();
+        async function renderAll() {
+            const list = await getTx();
             const tbody = document.getElementById('txBody');
             tbody.innerHTML = '';
 
@@ -1158,31 +1184,17 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            try {
-                applyTheme();
-                applySettings();
-                setAutoDate();
-                loadTx();
-                renderAll();
-            } catch(err) {
-                console.error('Finance init error:', err);
-                // Fallback — try again after DOM settles
-                setTimeout(() => {
-                    try { renderAll(); } catch(e) { console.error(e); }
-                }, 300);
-            }
+        document.addEventListener('DOMContentLoaded', async () => {
+            applyTheme(); applySettings(); setAutoDate();
+            showSaving(true);
+            try { await renderAll(); }
+            catch(err) { showToast('⚠️ Could not load transactions. Check internet.', true); }
+            finally { showSaving(false); }
         });
-
-        // ── Cross-tab sync ────────────────────────────────────
-        window.addEventListener('storage', (e) => {
-            if (e.key === TX_KEY) {
-                try { renderAll(); } catch(err) {}
-            }
-        });
+        setInterval(async () => { try { await renderAll(); } catch(e){} }, 30000);
 
         // ── Save Transaction ──────────────────────────────────
-        function saveTransaction() {
+        async function saveTransaction() {
             const dateVal = document.getElementById('txDate').value;
             const cat     = document.getElementById('txCategory').value;
             const rawAmt  = document.getElementById('txAmount').value;
@@ -1209,10 +1221,15 @@
                 return;
             }
 
-            const list = getTx();
-            list.unshift({ id: nextTxId(), date: formatDisplayDate(dateVal), category: cat, desc, amount, expense: isExpense(cat) });
-            saveTx(list);
-            renderAll();
+            showSaving(true);
+            try {
+                await sbFetch('transactions', 'POST', {
+                    tx_date: formatDisplayDate(dateVal), category: cat,
+                    description: desc, amount, expense: isExpense(cat)
+                });
+                await renderAll();
+            } catch(err) { alert('Error saving: ' + err.message); }
+            finally { showSaving(false); }
 
             document.getElementById('txDate').value     = '';
             document.getElementById('txAmount').value   = '';
@@ -1225,10 +1242,11 @@
         // ── Edit ──────────────────────────────────────────────
         let editingTxId = null;
 
-        function editRow(btn) {
+        async function editRow(btn) {
             const row = btn.closest('tr');
             editingTxId = parseInt(row.dataset.id);
-            const tx = getTx().find(t => t.id === editingTxId);
+            const list = await getTx();
+            const tx = list.find(t => t.id === editingTxId);
             if (!tx) return;
 
             document.getElementById('editDate').value     = parseDisplayDate(tx.date);
@@ -1242,7 +1260,7 @@
             document.getElementById('editModal').classList.remove('active');
         }
 
-        function saveEdit() {
+        async function saveEdit() {
             const dateVal = document.getElementById('editDate').value;
             const cat     = document.getElementById('editCategory').value;
             const rawAmt  = document.getElementById('editAmount').value;
@@ -1269,38 +1287,46 @@
                 return;
             }
 
-            const list = getTx().map(t =>
-                t.id === editingTxId
-                    ? { ...t, date: formatDisplayDate(dateVal), category: cat, amount, desc, expense: isExpense(cat) }
-                    : t
-            );
-            saveTx(list);
-            renderAll();
-            closeEditModal();
-            logActivity(`✏️ Transaction updated: ${desc}`, 'finance');
-            showToast('✅ Transaction updated successfully!');
+            showSaving(true);
+            try {
+                await sbFetch(`transactions?id=eq.${editingTxId}`, 'PATCH', {
+                    tx_date: formatDisplayDate(dateVal), category: cat,
+                    description: desc, amount, expense: isExpense(cat)
+                });
+                logActivity(`✏️ Transaction updated: ${desc}`, 'finance');
+                await renderAll();
+                closeEditModal();
+                showToast('✅ Transaction updated successfully!');
+            } catch(err) {
+                showToast('❌ Error updating: ' + err.message, true);
+            } finally { showSaving(false); }
         }
 
         // ── Delete ─────────────────────────────────────────────
         let deletingTxId = null;
 
-        function deleteRow(btn) {
+        async function deleteRow(btn) {
             const row = btn.closest('tr');
             deletingTxId = parseInt(row.dataset.id);
-            const tx = getTx().find(t => t.id === deletingTxId);
+            const list = await getTx();
+            const tx = list.find(t => t.id === deletingTxId);
             document.getElementById('deleteDesc').textContent = tx ? `${tx.desc} (GHS ${fmt(tx.amount)})` : '';
             document.getElementById('deleteModal').classList.add('active');
         }
 
-        function confirmDelete() {
+        async function confirmDelete() {
             if (deletingTxId !== null) {
-                const updated = getTx().filter(t => t.id !== deletingTxId);
-                saveTx(updated);
-                deletingTxId = null;
-                closeDeleteModal();
-                renderAll(); // recalculates and updates all 4 summary cards
-                logActivity('🗑️ Transaction deleted', 'finance');
-                showToast('🗑️ Transaction deleted and totals updated.');
+                showSaving(true);
+                try {
+                    await sbFetch(`transactions?id=eq.${deletingTxId}`, 'DELETE');
+                    logActivity('🗑️ Transaction deleted', 'finance');
+                    deletingTxId = null;
+                    closeDeleteModal();
+                    await renderAll();
+                    showToast('🗑️ Transaction deleted and totals updated.');
+                } catch(err) {
+                    showToast('❌ Error deleting: ' + err.message, true);
+                } finally { showSaving(false); }
             }
         }
 
@@ -1309,8 +1335,8 @@
         }
 
         // ── Export PDF (print dialog) ─────────────────────────
-        function exportPDF() {
-            const list = getTx();
+        async function exportPDF() {
+            const list = await getTx();
             if (!list.length) { showToast('⚠️ No transactions to export.', true); return; }
 
             // Set print date
@@ -1324,8 +1350,8 @@
         }
 
         // ── Export CSV ────────────────────────────────────────
-        function exportCSV() {
-            const list = getTx();
+        async function exportCSV() {
+            const list = await getTx();
             if (!list.length) { showToast('⚠️ No transactions to export.', true); return; }
 
             const headers = ['Date', 'Category', 'Description', 'Type', 'Amount (GHS)'];
@@ -1392,6 +1418,29 @@
             if (sn && s.adminName)  sn.textContent  = s.adminName + ' Admin';
         }
 
+    
+        // ── Logout ────────────────────────────────────────────
+        function confirmLogout()    { document.getElementById('logoutModal').classList.add('active'); }
+        function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('active'); }
+        async function doLogout() {
+            try {
+                const session = localStorage.getItem('icgc_session');
+                if (session) {
+                    const s = JSON.parse(session);
+                    if (s.access_token) {
+                        await fetch('https://negrfzkejqfmswxnfiyk.supabase.co/auth/v1/logout', {
+                            method: 'POST',
+                            headers: {
+                                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8',
+                                'Authorization': `Bearer ${s.access_token}`
+                            }
+                        });
+                    }
+                }
+            } catch(e) {}
+            localStorage.removeItem('icgc_session');
+            window.location.href = 'l1.html';
+        }
     </script>
 
     <!-- Logout Confirmation Modal -->
