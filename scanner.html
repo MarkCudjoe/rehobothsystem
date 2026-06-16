@@ -143,18 +143,8 @@
 </div>
 
 <script>
-    // ── Session Guard ─────────────────────────────────────
-    (function() {
-        const s = localStorage.getItem('icgc_session');
-        if (!s) { window.location.href = 'l1.html'; return; }
-        try {
-            const parsed = JSON.parse(s);
-            if (parsed.expires_at < Date.now()) {
-                localStorage.removeItem('icgc_session');
-                window.location.href = 'l1.html';
-            }
-        } catch(e) { localStorage.removeItem('icgc_session'); window.location.href = 'l1.html'; }
-    })();
+    // Scanner is a public self-check-in page — no login required.
+    // Members and visitors scan the church QR code and check in directly.
 
     const SUPABASE_URL = 'https://negrfzkejqfmswxnfiyk.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8';
@@ -291,7 +281,8 @@
 
     // ── Check In Member ───────────────────────────────────────
     async function checkInMember(memberId) {
-        const member = getMembers().find(m => m.id === memberId);
+        const allMembers = await getMembers();
+        const member = allMembers.find(m => m.id === memberId);
         if (!member) return;
 
         const scanData = scanSession;
@@ -300,23 +291,25 @@
 
         const time = timeNow(), date = todayDate();
 
-        // Update last seen
-        const hist = getHistory();
-        hist[memberId] = date;
-        saveHistory(hist);
+        try {
+            // Update last seen
+            await upsertLastSeen(memberId, date);
 
-        // Save scan entry
-        const entry = { id: memberId, name: member.name, dept: member.dept||'Member', gender: member.gender||'', time, date, isVisitor: false };
-        scanData.scans = scanData.scans || [];
-        scanData.scans.push(entry);
-        // scanSession updated in memory
+            // Save scan entry
+            const entry = { id: memberId, name: member.name, dept: member.dept||'Member', gender: member.gender||'', time, date, isVisitor: false };
+            scanData.scans = scanData.scans || [];
+            scanData.scans.push(entry);
 
-        persistToSession(member, date);
+            await persistToSession(member, date);
 
-        showSuccess('✅', member.name, `${member.dept||'Member'} — checked in!`, true);
-        appendLog(entry, true);
-        updateLogCount();
-        onSearch(document.getElementById('searchInput').value);
+            showSuccess('✅', member.name, `${member.dept||'Member'} — checked in!`, true);
+            appendLog(entry, true);
+            updateLogCount();
+            onSearch(document.getElementById('searchInput').value);
+        } catch(err) {
+            alert('Check-in error: ' + err.message);
+            console.error(err);
+        }
     }
 
     // ── Visitor Form ──────────────────────────────────────────
@@ -339,7 +332,7 @@
         document.getElementById('visitorFormModal').style.display = 'none';
     }
 
-    function submitVisitorForm() {
+    async function submitVisitorForm() {
         const name = document.getElementById('vfName').value.trim();
         if (!name) {
             document.getElementById('vfError').style.display = 'block';
@@ -371,59 +364,62 @@
         const time = timeNow(), date = todayDate();
         const visitorId = `ICGC-V${Date.now()}`;
 
-        // Check if already in members
-        const members     = getMembers();
-        const alreadyHere = members.find(m => m.name.toLowerCase() === name.toLowerCase());
-        if (alreadyHere) {
+        const submitBtn = document.querySelector('#visitorFormModal .submit-btn, #visitorFormModal button[onclick="submitVisitorForm()"]');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Submitting...'; }
+
+        try {
+            // Check if already in members
+            const members     = await getMembers();
+            const alreadyHere = members.find(m => m.name.toLowerCase() === name.toLowerCase());
+            if (alreadyHere) {
+                closeVisitorForm();
+                await checkInMember(alreadyHere.id);
+                return;
+            }
+
+            // Map sex to gender field used across the system
+            const genderMap = { male: 'male', female: 'female' };
+            const gender    = genderMap[sex] || '';
+
+            // Build full visitor record
+            const newVisitor = {
+                id:         visitorId,
+                name,
+                phone,
+                whatsapp,
+                dept:       'Visitor',
+                gender,
+                ageGroup,
+                occupation,
+                address,
+                location:   locationStr,
+                reason,
+                status:     'visitor',
+                visitDate:  date,
+                dob:        ''
+            };
+
+            await saveMemberToDB(newVisitor);
+            await upsertLastSeen(visitorId, date);
+
+            // Save scan entry
+            const entry = { id: visitorId, name, dept: 'Visitor', gender, time, date, isVisitor: true };
+            scanSession.scans = scanSession.scans || [];
+            scanSession.scans.push(entry);
+
+            // Persist to attendance session
+            await persistToSession(newVisitor, date);
+
             closeVisitorForm();
-            checkInMember(alreadyHere.id);
-            return;
+            showSuccess('🙋', name, "Welcome to Rehoboth Temple! We're glad you're here.", true);
+            appendLog(entry, true);
+            updateLogCount();
+        } catch(err) {
+            alert('Error submitting form: ' + err.message + '\n\nPlease check your internet connection and try again.');
+            console.error('Visitor submit error:', err);
+        } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '✅ Submit & Check In'; }
         }
-
-        // Map sex to gender field used across the system
-        const genderMap = { male: 'male', female: 'female' };
-        const gender    = genderMap[sex] || '';
-
-        // Build full visitor record
-        const newVisitor = {
-            id:         visitorId,
-            name,
-            phone,
-            whatsapp,
-            dept:       'Visitor',
-            gender,
-            ageGroup,
-            occupation,
-            address,
-            location:   locationStr,
-            reason,
-            status:     'visitor',
-            visitDate:  date,
-            dob:        ''
-        };
-
-        members.push(newVisitor);
-        localStorage.setItem(MEMBERS_KEY, JSON.stringify(members));
-
-        // Update last seen
-        const hist = getHistory();
-        hist[visitorId] = date;
-        saveHistory(hist);
-
-        // Save scan entry
-        const entry = { id: visitorId, name, dept: 'Visitor', gender, time, date, isVisitor: true };
-        const sd = scanSession;
-        sd.scans = sd.scans || [];
-        sd.scans.push(entry);
-        // scanSession updated in memory
-
-        // Persist to attendance session
-        persistToSession(newVisitor, date);
-
-        closeVisitorForm();
-        showSuccess('🙋', name, "Welcome to Rehoboth Temple! We're glad you're here.", true);
-        appendLog(entry, true);
-        updateLogCount();
     }
 
     // ── Persist to attendance sessions ────────────────────────
