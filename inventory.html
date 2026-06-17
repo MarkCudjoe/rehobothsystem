@@ -693,7 +693,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -714,6 +714,7 @@
                 <li class="nav-item">Attendance</li>
             </a>
             <a href="scanner.html" style="text-decoration:none;color:inherit;"><li class="nav-item">📷 QR Scanner</li></a>
+            <li class="nav-item" onclick="confirmLogout()" style="background:#c62828;color:white;margin-top:14px;text-align:center;justify-content:center;">🔒 Logout</li>
         </ul>
     </div>
 
@@ -989,7 +990,7 @@
             }
           } catch(err) {
                 console.error('Inventory init error:', err);
-                showToast && showToast('⚠️ Could not load inventory. Check internet.', true);
+                showToast && showToast('⚠️ ' + err.message, true);
             } finally { showSaving(false); }
         });
         setInterval(async () => { try { await renderTable(); await checkLowStock(); } catch(e){} }, 30000);
