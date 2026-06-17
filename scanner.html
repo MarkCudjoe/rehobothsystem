@@ -149,14 +149,14 @@
     const SUPABASE_URL = 'https://negrfzkejqfmswxnfiyk.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8';
 
-    async function sbFetch(path, method='GET', body=null, extra='') {
+    async function sbFetch(path, method='GET', body=null, extra='', preferOverride=null) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${extra}`, {
             method,
             headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${SUPABASE_KEY}`,
                 'Content-Type': 'application/json',
-                'Prefer': method==='POST' ? 'return=representation' : ''
+                'Prefer': preferOverride || (method==='POST' ? 'return=representation' : '')
             },
             body: body ? JSON.stringify(body) : null
         });
@@ -167,7 +167,8 @@
     async function getMembers() { return await sbFetch('members?order=created_at.asc'); }
     async function upsertLastSeen(id, dateStr) {
         await sbFetch('attendance_last_seen','POST',
-            {member_id:id,last_date:dateStr},'?on_conflict=member_id');
+            {member_id:id,last_date:dateStr},'?on_conflict=member_id',
+            'resolution=merge-duplicates');
     }
     async function saveSessionToDB(date, service, attendance) {
         await sbFetch('attendance_sessions','POST',{
@@ -218,7 +219,8 @@
             // Show newest first
             [...sd.scans].reverse().forEach(s => appendLog(s, false));
         } else {
-            saveScanData({ date: serviceDate, scans: [] });
+            scanSession.date  = serviceDate;
+            scanSession.scans = [];
         }
         updateLogCount();
     });
@@ -462,7 +464,7 @@
     }
 
     function updateLogCount() {
-        document.getElementById('logCount').textContent = (getScanData().scans||[]).length;
+        document.getElementById('logCount').textContent = (scanSession.scans||[]).length;
     }
 </script>
 <!-- ── Visitor "Let's Get Acquainted" Form Modal ── -->
