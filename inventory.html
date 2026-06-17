@@ -693,7 +693,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -1184,6 +1184,16 @@
         }
 
         // ── Settings (church name in sidebar) ────────────────
+        function setAutoDate() {
+            const now = new Date();
+            const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const d = now.getDate();
+            const s = (d%10===1&&d!==11)?'st':(d%10===2&&d!==12)?'nd':(d%10===3&&d!==13)?'rd':'th';
+            const el = document.getElementById('currentDate');
+            if (el) el.textContent = `${days[now.getDay()]}, ${d}${s} ${months[now.getMonth()]} ${now.getFullYear()}`;
+        }
+
         function applySettings() {
             const s = JSON.parse(localStorage.getItem('icgc_settings') || '{}');
             const bn = document.getElementById('sidebarBranch');
