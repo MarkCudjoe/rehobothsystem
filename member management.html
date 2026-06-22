@@ -809,7 +809,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -902,7 +902,7 @@
                 style="padding:9px 20px;border-radius:8px;border:none;font-weight:bold;font-size:0.88rem;cursor:pointer;background:var(--primary-green);color:white;">
                 👥 Member Directory
             </button>
-            <button id="tabVisitors" onclick="switchDirTab('visitors')"
+            <button onclick="window.location.href='visitors.html'"
                 style="padding:9px 20px;border-radius:8px;border:2px solid #e65100;font-weight:bold;font-size:0.88rem;cursor:pointer;background:white;color:#e65100;">
                 🙋 Visitor Records
             </button>
@@ -957,26 +957,8 @@
 
     <!-- Visitor Records Panel -->
     <div id="panelVisitors" style="display:none; padding-top:8px;">
-        <!-- Back button - simple, at the top, no sticky -->
-        <div style="display:flex; align-items:center; justify-content:space-between;
-                    gap:10px; margin-bottom:16px; flex-wrap:wrap;">
-            <h2 style="margin:0; color:var(--dark-green,#1b5e20); font-size:1.05rem;
-                       display:flex; align-items:center; gap:6px;">
-                🙋 Visitor Records
-            </h2>
-            <button onclick="switchDirTab('members')" style="
-                background: var(--dark-green,#1b5e20); color: white;
-                border: none; border-radius: 8px;
-                padding: 10px 18px; font-weight: 700; font-size: 0.85rem;
-                white-space: nowrap; cursor: pointer;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-                ← Back to Members
-            </button>
-        </div>
-        <p style="font-size:0.83rem; color:#888; margin-bottom:14px;">
-            Visitors who scanned the QR code and filled the "Let's Get Acquainted" form appear here.
-        </p>
-        <div id="visitorRecordsList"></div>
+        <!-- Redirect to dedicated visitors page -->
+        <script>window.location.href = 'visitors.html';</script>
     </div>
 
     <!-- Add / Edit Member Modal -->
