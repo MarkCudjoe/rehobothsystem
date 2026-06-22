@@ -809,7 +809,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -957,16 +957,29 @@
 
     <!-- Visitor Records Panel -->
     <div id="panelVisitors" style="display:none;">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
-            <h2 class="section-title" style="margin-bottom:0; display:flex; align-items:center; gap:8px;">🙋 Visitor Records</h2>
+        <!-- Fixed header bar - always visible -->
+        <div id="visitorHeader" style="
+            position: sticky; top: 0; z-index: 200;
+            background: var(--bg, #f4f7f6);
+            padding: 14px 0 12px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid var(--primary-green, #2e7d32);
+            display: flex; align-items: center;
+            justify-content: space-between; gap: 10px;">
+            <h2 style="margin:0; color:var(--dark-green,#1b5e20); font-size:1.05rem;
+                       display:flex; align-items:center; gap:6px;">
+                🙋 Visitor Records
+            </h2>
             <button onclick="switchDirTab('members')" style="
-                background:var(--dark-green,#1b5e20); color:white; border:none; border-radius:8px;
-                padding:10px 18px; font-weight:700; font-size:0.88rem;
-                cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+                background: var(--dark-green,#1b5e20); color: white;
+                border: none; border-radius: 8px;
+                padding: 10px 18px; font-weight: 700; font-size: 0.85rem;
+                white-space: nowrap; cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
                 ← Back to Members
             </button>
         </div>
-        <p style="font-size:0.85rem;color:#888;margin-bottom:16px;">
+        <p style="font-size:0.83rem; color:#888; margin-bottom:14px;">
             Visitors who scanned the QR code and filled the "Let's Get Acquainted" form appear here.
         </p>
         <div id="visitorRecordsList"></div>
@@ -1569,10 +1582,16 @@
                 pm.style.display = ''; pv.style.display = 'none';
                 bm.style.background = 'var(--primary-green,#2e7d32)'; bm.style.color = 'white'; bm.style.border = 'none';
                 bv.style.background = 'white'; bv.style.color = '#e65100'; bv.style.border = '2px solid #e65100';
+                // Scroll back to top of page
+                document.querySelector('.main-content')?.scrollTo(0, 0);
+                window.scrollTo(0, 0);
             } else {
                 pm.style.display = 'none'; pv.style.display = '';
                 bv.style.background = '#e65100'; bv.style.color = 'white'; bv.style.border = 'none';
                 bm.style.background = 'white'; bm.style.color = 'var(--primary-green,#2e7d32)'; bm.style.border = '2px solid var(--primary-green,#2e7d32)';
+                // Scroll to top so sticky Back button is immediately visible
+                document.querySelector('.main-content')?.scrollTo(0, 0);
+                window.scrollTo(0, 0);
                 renderVisitorRecords();
             }
         }
