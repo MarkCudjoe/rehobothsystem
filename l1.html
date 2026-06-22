@@ -162,9 +162,9 @@
 <body>
 
 <div class="card">
-    <img src="ICGCNCT.png" alt="ICGC Logo" class="logo">
+    <img src="ICGCNCT.PNG" alt="ICGC Logo" class="logo">
     <h2>ICGC Rehoboth</h2>
-    <p class="subtitle">Rehoboth Temple Management System</p>
+    <p class="subtitle">Church Management System</p>
 
     <!-- Tab switcher -->
     <div class="tabs">
@@ -222,7 +222,45 @@
     const SUPER_PASS  = 'Rehoboth@SuperAdmin2026';
 
     // ── Check if already logged in ────────────────────────
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+        // ── Handle Supabase email confirmation redirect ────────
+        // When user clicks the confirmation link in their email,
+        // Supabase redirects back here with #access_token=... in the URL hash
+        const hash = window.location.hash;
+        if (hash && hash.includes('access_token')) {
+            const params = new URLSearchParams(hash.replace('#', ''));
+            const accessToken  = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+            const expiresIn    = parseInt(params.get('expires_in') || '86400');
+            const type         = params.get('type'); // 'signup' or 'recovery'
+
+            if (accessToken && type === 'signup') {
+                // Fetch user info with the token
+                try {
+                    const res  = await fetch('https://negrfzkejqfmswxnfiyk.supabase.co/auth/v1/user', {
+                        headers: {
+                            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ3JmemtlanFmbXN3eG5maXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODY5NjUsImV4cCI6MjA5NDk2Mjk2NX0.wC3qC7l5PRIKd0o8p0oSphKX9q8QtzJjDwYfJg-duZ8',
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                    const user = await res.json();
+                    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Staff';
+                    localStorage.setItem('icgc_session', JSON.stringify({
+                        user: { email: user.email, name, role: 'staff' },
+                        access_token: accessToken,
+                        refresh_token: refreshToken,
+                        expires_at: Date.now() + (expiresIn * 1000)
+                    }));
+                    // Clear the hash from the URL and redirect to dashboard
+                    window.location.replace('h2.html');
+                    return;
+                } catch(e) {
+                    showError('Email confirmed! Please log in below.');
+                }
+            }
+        }
+
+        // ── Check existing session ─────────────────────────────
         const session = localStorage.getItem('icgc_session');
         if (session) {
             try {
