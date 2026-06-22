@@ -22,7 +22,7 @@
 
         body {
             display: flex;
-            height: 100vh;
+            min-height: 100vh;
             background-color: #f4f7f6;
         }
 
@@ -809,7 +809,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -956,16 +956,10 @@
     </div><!-- end panelMembers -->
 
     <!-- Visitor Records Panel -->
-    <div id="panelVisitors" style="display:none;">
-        <!-- Fixed header bar - always visible -->
-        <div id="visitorHeader" style="
-            position: sticky; top: 0; z-index: 200;
-            background: var(--bg, #f4f7f6);
-            padding: 14px 0 12px;
-            margin-bottom: 12px;
-            border-bottom: 2px solid var(--primary-green, #2e7d32);
-            display: flex; align-items: center;
-            justify-content: space-between; gap: 10px;">
+    <div id="panelVisitors" style="display:none; padding-top:8px;">
+        <!-- Back button - simple, at the top, no sticky -->
+        <div style="display:flex; align-items:center; justify-content:space-between;
+                    gap:10px; margin-bottom:16px; flex-wrap:wrap;">
             <h2 style="margin:0; color:var(--dark-green,#1b5e20); font-size:1.05rem;
                        display:flex; align-items:center; gap:6px;">
                 🙋 Visitor Records
@@ -975,7 +969,7 @@
                 border: none; border-radius: 8px;
                 padding: 10px 18px; font-weight: 700; font-size: 0.85rem;
                 white-space: nowrap; cursor: pointer;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
                 ← Back to Members
             </button>
         </div>
