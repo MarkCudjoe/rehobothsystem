@@ -809,7 +809,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -956,10 +956,7 @@
     </div><!-- end panelMembers -->
 
     <!-- Visitor Records Panel -->
-    <div id="panelVisitors" style="display:none; padding-top:8px;">
-        <!-- Redirect to dedicated visitors page -->
-        <script>window.location.href = 'visitors.html';</script>
-    </div>
+    <div id="panelVisitors" style="display:none;"></div>
 
     <!-- Add / Edit Member Modal -->
     <div class="modal-backdrop" id="memberModal">
@@ -1550,100 +1547,15 @@
 
         // ── Visitor Records Tab ───────────────────────────────
         function switchDirTab(tab) {
+            if (tab === 'visitors') {
+                window.location.href = 'visitors.html';
+                return;
+            }
             const pm = document.getElementById('panelMembers');
-            const pv = document.getElementById('panelVisitors');
             const bm = document.getElementById('tabMembers');
-            const bv = document.getElementById('tabVisitors');
-            if (tab === 'members') {
-                pm.style.display = ''; pv.style.display = 'none';
-                bm.style.background = 'var(--primary-green,#2e7d32)'; bm.style.color = 'white'; bm.style.border = 'none';
-                bv.style.background = 'white'; bv.style.color = '#e65100'; bv.style.border = '2px solid #e65100';
-                // Scroll back to top of page
-                document.querySelector('.main-content')?.scrollTo(0, 0);
-                window.scrollTo(0, 0);
-            } else {
-                pm.style.display = 'none'; pv.style.display = '';
-                bv.style.background = '#e65100'; bv.style.color = 'white'; bv.style.border = 'none';
-                bm.style.background = 'white'; bm.style.color = 'var(--primary-green,#2e7d32)'; bm.style.border = '2px solid var(--primary-green,#2e7d32)';
-                // Scroll to top so sticky Back button is immediately visible
-                document.querySelector('.main-content')?.scrollTo(0, 0);
-                window.scrollTo(0, 0);
-                renderVisitorRecords();
-            }
-        }
-
-        async function renderVisitorRecords() {
-            const members  = await getMembers();
-            const visitors = members.filter(m => m.status === 'visitor');
-            const el       = document.getElementById('visitorRecordsList');
-            if (!el) return;
-            if (!visitors.length) {
-                el.innerHTML = `<div style="text-align:center;padding:40px;color:#999;">
-                    <div style="font-size:2.5rem;margin-bottom:12px;">🙋</div>
-                    <p style="font-weight:600;">No visitor forms submitted yet.</p>
-                </div>`; return;
-            }
-            const genderIcon = { male:'👨', female:'👩', child:'🧒' };
-            el.innerHTML = visitors.map(v => {
-                const details = [
-                    v.whatsapp   ? { label: '💬 WhatsApp',  value: v.whatsapp } : null,
-                    v.ageGroup   ? { label: '🎂 Age Group',  value: v.ageGroup } : null,
-                    v.gender     ? { label: '⚧ Gender',      value: `${genderIcon[v.gender]||''} ${v.gender}` } : null,
-                    v.occupation ? { label: '💼 Occupation',value: v.occupation } : null,
-                    v.address    ? { label: '🏠 Address',    value: v.address } : null,
-                    v.location   ? { label: '📍 Location',   value: v.location } : null,
-                    v.reason     ? { label: '🙏 Reason',     value: v.reason } : null,
-                    v.visitDate  ? { label: '📅 Visit Date', value: v.visitDate } : null,
-                ].filter(Boolean);
-
-                const detailsHTML = details.length
-                    ? details.map(d => `<div style="padding:6px 0;border-bottom:1px solid #f2f2f2;"><span style="color:#888;font-size:0.74rem;font-weight:700;text-transform:uppercase;">${d.label}</span><br><span style="font-size:0.9rem;">${d.value}</span></div>`).join('')
-                    : `<div style="padding:10px 0;color:#aaa;font-size:0.85rem;">No additional details on file.</div>`;
-
-                return `
-                <div style="background:white;border-radius:12px;margin-bottom:12px;border-left:5px solid #e65100;box-shadow:0 2px 8px rgba(0,0,0,0.06);overflow:hidden;">
-                    <div onclick="toggleVisitorCard('${v.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 18px;cursor:pointer;">
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-weight:800;color:#1b5e20;font-size:1.02rem;">${v.name}</div>
-                            <div style="font-size:0.78rem;color:#aaa;margin-top:2px;">${v.phone||'No phone'} &middot; ${v.dept||'Visitor'}</div>
-                        </div>
-                        <span id="caret-${v.id}" style="color:#999;font-size:1.1rem;transition:transform 0.2s;">▾</span>
-                    </div>
-                    <div id="detail-${v.id}" style="display:none;padding:0 18px 16px 18px;">
-                        <div style="border-top:1px solid #f2f2f2;padding-top:10px;">
-                            <div style="font-size:0.74rem;color:#bbb;margin-bottom:8px;">ID: ${v.id}</div>
-                            ${detailsHTML}
-                            <button onclick="event.stopPropagation(); promoteToMember('${v.id}')"
-                                style="width:100%;margin-top:14px;background:#2e7d32;color:white;border:none;padding:11px;border-radius:8px;font-weight:700;font-size:0.88rem;cursor:pointer;">
-                                ➕ Add as Member
-                            </button>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        function toggleVisitorCard(id) {
-            const detail = document.getElementById(`detail-${id}`);
-            const caret  = document.getElementById(`caret-${id}`);
-            const isOpen = detail.style.display === 'block';
-            detail.style.display = isOpen ? 'none' : 'block';
-            caret.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-        }
-
-        async function promoteToMember(visitorId) {
-            const members = await getMembers();
-            const m = members.find(x => x.id === visitorId);
-            if (!m || !confirm(`Promote ${m.name} to Active Member?`)) return;
-            showSaving(true);
-            try {
-                await updateMemberInDB({ ...m, status: 'active', dept: m.dept||'Choir' });
-                await renderVisitorRecords();
-                const updated = await getMembers();
-                await renderTable(updated);
-                showToast(`✅ ${m.name} promoted to Active Member!`);
-            } catch(err) { alert('Error: ' + err.message); }
-            finally { showSaving(false); }
+            if (pm) pm.style.display = '';
+            if (bm) { bm.style.background = 'var(--primary-green,#2e7d32)'; bm.style.color = 'white'; bm.style.border = 'none'; }
+            window.scrollTo(0, 0);
         }
 
         // ── Init ──────────────────────────────────────────────
