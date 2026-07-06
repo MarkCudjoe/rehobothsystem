@@ -587,103 +587,26 @@
         }
 
         @media (max-width: 480px) {
-            /* ── Member table → collapsible cards on phones ──── */
-            #memberTable thead { display: none; }
-            #memberTable, #memberTable tbody { display: block; width: 100%; }
-            #memberTable { min-width: 0; }
-            .member-table-container { overflow-x: visible; }
-
-            /* Each row = a card */
-            #memberBody tr {
-                display: block;
-                background: var(--card-bg, #fff);
-                border: 1px solid var(--border, #eee);
-                border-left: 4px solid var(--primary-green, #2e7d32);
+            .member-table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
                 border-radius: 10px;
-                margin-bottom: 10px;
-                padding: 0;
-                overflow: hidden;
             }
-
-            /* All cells hidden by default */
-            #memberBody td { display: none; }
-
-            /* Checkbox — top right corner */
-            #memberBody td:nth-child(1) {
-                display: block;
-                position: absolute;
-                top: 14px;
-                right: 14px;
+            #memberTable {
+                min-width: 520px;
+                font-size: 0.82rem;
             }
-
-            /* Name header row — always visible, clickable */
-            #memberBody td:nth-child(3) {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 14px 46px 14px 14px;
-                font-weight: 700;
-                font-size: 0.98rem;
-                color: var(--dark-green, #1b5e20);
-                cursor: pointer;
-                position: relative;
+            #memberTable th, #memberTable td {
+                padding: 10px 10px;
             }
-            #memberBody td:nth-child(3)::after {
-                content: '▾';
-                position: absolute;
-                right: 42px;
-                color: #aaa;
-                font-size: 1rem;
-                transition: transform 0.2s;
-            }
-            #memberBody tr.card-open td:nth-child(3)::after {
-                transform: rotate(180deg);
-            }
-
-            /* Status badge next to name */
-            #memberBody td:nth-child(7) {
-                display: none;
-            }
-
-            /* When card is open — show all cells */
-            #memberBody tr.card-open td {
-                display: block;
-                padding: 5px 14px;
-                border: none;
-                font-size: 0.88rem;
-            }
-            #memberBody tr.card-open td:nth-child(1) {
-                display: block;
-                padding: 0;
-            }
-            #memberBody tr.card-open td:nth-child(3) {
-                background: var(--light-green, #e8f5e9);
-                border-bottom: 1px solid var(--border, #eee);
-                padding: 14px 46px 14px 14px;
-            }
-            #memberBody tr.card-open td[data-label]::before {
-                content: attr(data-label);
-                display: block;
-                font-size: 0.68rem;
-                font-weight: 700;
-                color: var(--primary-green, #2e7d32);
-                text-transform: uppercase;
-                letter-spacing: 0.4px;
-                margin-bottom: 1px;
-                margin-top: 6px;
-            }
-            #memberBody tr.card-open td:nth-child(3)::before { display: none; }
-            #memberBody tr.card-open td:last-child {
-                display: flex;
-                gap: 14px;
-                flex-wrap: wrap;
-                padding: 10px 14px 14px;
-                border-top: 1px solid var(--border, #eee);
-                margin-top: 4px;
-            }
-            #memberBody tr.card-open td:last-child::before { display: none; }
+            /* Hide less important columns on mobile */
+            #memberTable th:nth-child(2),
+            #memberTable td:nth-child(2) { display: none; } /* Member ID */
+            #memberTable th:nth-child(5),
+            #memberTable td:nth-child(5) { display: none; } /* Department */
+            #memberTable th:nth-child(6),
+            #memberTable td:nth-child(6) { display: none; } /* Gender */
         }
-
 
             /* Single column stats on very small screens */
             .stats-grid {
@@ -809,7 +732,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -1146,11 +1069,6 @@
                 const gLabel = gIcon[m.gender] ? gIcon[m.gender] + ' ' + m.gender : '—';
                 const row = document.createElement('tr');
                 row.dataset.id = m.id;
-                // Mobile card toggle - click name cell to expand/collapse
-                row.querySelector && setTimeout(() => {
-                    const nameCell = row.children[2];
-                    if (nameCell) nameCell.addEventListener('click', () => row.classList.toggle('card-open'));
-                }, 0);
                 row.innerHTML = `
                     <td><input type="checkbox" class="member-select" value="${m.id}" onchange="updateSelectedCount()"></td>
                     <td data-label="Member ID" style="color:#999;font-size:0.82rem;">${m.id}</td>
