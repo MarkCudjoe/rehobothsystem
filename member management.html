@@ -590,45 +590,26 @@
             .member-table-container {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
-                border-radius: 10px;
             }
-            #memberTable {
-                min-width: 520px;
-                font-size: 0.82rem;
-            }
-            #memberTable th, #memberTable td {
-                padding: 10px 10px;
-            }
-            /* Hide less important columns on mobile */
-            #memberTable th:nth-child(2),
-            #memberTable td:nth-child(2) { display: none; } /* Member ID */
-            #memberTable th:nth-child(5),
-            #memberTable td:nth-child(5) { display: none; } /* Department */
-            #memberTable th:nth-child(6),
-            #memberTable td:nth-child(6) { display: none; } /* Gender */
-        }
 
-            /* Single column stats on very small screens */
+            /* Keep stats in 2-column grid on mobile */
             .stats-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
             }
+            .stat-card p { font-size: 1.4rem; }
+            .stat-card h3 { font-size: 0.82rem; }
+            .main-content { padding: 65px 12px 24px 12px; }
 
-            .stat-card p {
-                font-size: 1.5rem;
-            }
+            /* Table: hide less critical columns, keep name/phone/status/actions */
+            #memberTable { min-width: 420px; font-size: 0.8rem; }
+            #memberTable th, #memberTable td { padding: 10px 8px; }
 
-            /* Tighter padding */
-            .main-content {
-                padding: 60px 10px 20px 10px;
-            }
-
-            .stat-card,
-            .finance-form,
-            .attendance-card,
-            .inventory-card,
-            .member-table-container {
-                padding: 14px;
-            }
+            /* Hide Member ID and Gender columns on small screens */
+            #memberTable th:nth-child(2),
+            #memberTable td:nth-child(2) { display: none; }
+            #memberTable th:nth-child(6),
+            #memberTable td:nth-child(6) { display: none; }
         }
 
 
@@ -732,7 +713,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -1078,10 +1059,12 @@
                     <td data-label="Gender">${gLabel}</td>
                     <td data-label="Status"><span class="status ${statusClass}">${statusLabel}</span></td>
                     <td>
-                        <span class="edit-btn" onclick="editRow(this)">Edit</span>
-                        <span class="delete-btn" onclick="deleteRow(this)">Delete</span>
-                        <span style="color:#1565c0;cursor:pointer;font-weight:600;font-size:0.82rem;" onclick="viewTithes('${m.id}','${m.name.replace(/'/g, '')}')">💰 Tithes</span>
-                        <span style="color:#25D366;cursor:pointer;font-weight:700;font-size:0.82rem;" onclick="messageMember('${m.phone||''}','${m.name.replace(/'/g, '')}')">💬 Message</span>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                            <span class="edit-btn" onclick="editRow(this)">Edit</span>
+                            <span class="delete-btn" onclick="deleteRow(this)">Delete</span>
+                            <span style="color:#1565c0;cursor:pointer;font-weight:600;font-size:0.82rem;" onclick="viewTithes('${m.id}','${m.name.replace(/'/g, '')}')">💰 Tithes</span>
+                            <span style="color:#25D366;cursor:pointer;font-weight:700;font-size:0.82rem;" onclick="messageMember('${m.phone||''}','${m.name.replace(/'/g, '')}')">💬 Message</span>
+                        </div>
                     </td>`;
                 tbody.appendChild(row);
             });
