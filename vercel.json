@@ -1,0 +1,11 @@
+{
+  "cleanUrls": false,
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/l1.html",
+      "permanent": false
+    }
+  ]
+}
