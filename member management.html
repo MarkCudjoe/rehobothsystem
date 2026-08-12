@@ -82,7 +82,7 @@
             position: fixed;
             top: 15px;
             left: 15px;
-            background: var(--dark-green);
+            background: #1b5e20;
             color: white;
             border: none;
             padding: 10px 15px;
@@ -614,43 +614,92 @@
 
 
         /* ── Dark Mode Variables ─────────────────────────────── */
+        /* ══════════════════════════════════════════════════════
+           DARK MODE — comprehensive, visually polished
+           ══════════════════════════════════════════════════════ */
         [data-theme="dark"] {
-            --bg:#121212; --card-bg:#1e1e1e; --card-shadow:0 2px 10px rgba(0,0,0,0.4);
-            --border:#333; --text:#e0e0e0; --subtext:#aaa; --text-grey:#aaa;
-            --white:#1e1e1e; --light-green:#1b3a1f;
-            --primary-green:#43a047; --dark-green:#2e7d32;
+            --bg:           #0f1710;
+            --card-bg:      #1a2b1c;
+            --card-bg-2:    #1e2f1f;
+            --border:       #2d4a2f;
+            --text:         #e8f0e8;
+            --text-grey:    #9ab09c;
+            --subtext:      #7a9a7c;
+            --white:        #1a2b1c;
+            --light-green:  #162a18;
+            --primary-green:#4caf50;
+            --dark-green:   #388e3c;
+            --card-shadow:  0 2px 12px rgba(0,0,0,0.5);
         }
-        body { transition: background 0.3s, color 0.3s; }
-        /* Dark mode applies to page cards — but NOT modals */
-        .stat-card, .member-table-container, .inventory-card,
-        .attendance-card, .table-container, .finance-form, .controls-card,
-        .finance-grid > div, .notes-card, .activity-card {
+        [data-theme="dark"] body          { background: var(--bg); color: var(--text); }
+        [data-theme="dark"] .main-content { background: var(--bg); }
+        [data-theme="dark"] .top-bar      { background: #0f1710 !important; border-bottom-color: var(--border) !important; }
+        [data-theme="dark"] .menu-btn     { background: #2e7d32 !important; color: white !important; }
+        [data-theme="dark"] .stat-card,
+        [data-theme="dark"] .member-table-container,
+        [data-theme="dark"] .inventory-card,
+        [data-theme="dark"] .attendance-card,
+        [data-theme="dark"] .table-container,
+        [data-theme="dark"] .finance-form,
+        [data-theme="dark"] .controls-card,
+        [data-theme="dark"] .finance-grid > div,
+        [data-theme="dark"] .notes-card,
+        [data-theme="dark"] .activity-card,
+        [data-theme="dark"] .gender-card,
+        [data-theme="dark"] .session-card,
+        [data-theme="dark"] .sf-card,
+        [data-theme="dark"] .stat-box {
             background: var(--card-bg) !important;
+            border-color: var(--border) !important;
             color: var(--text) !important;
         }
-        .main-content { background: var(--bg); }
-        table th, table td { color: var(--text); }
-        /* Only non-modal inputs get dark styling */
-        .search-input, .notes-ta {
-            background: var(--bg) !important;
+        [data-theme="dark"] .stat-card p,
+        [data-theme="dark"] .stat-card h3  { color: var(--text) !important; }
+        [data-theme="dark"] table          { color: var(--text); }
+        [data-theme="dark"] th             { color: var(--primary-green) !important; border-color: var(--border) !important; background: var(--card-bg-2) !important; }
+        [data-theme="dark"] td             { color: var(--text) !important; border-color: var(--border) !important; }
+        [data-theme="dark"] tr:hover td    { background: var(--card-bg-2) !important; }
+        [data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3 { color: var(--text) !important; }
+        [data-theme="dark"] .section-title,
+        [data-theme="dark"] .header h1    { color: #81c784 !important; }
+        [data-theme="dark"] .search-input,
+        [data-theme="dark"] .notes-ta,
+        [data-theme="dark"] .control-group input,
+        [data-theme="dark"] .control-group select,
+        [data-theme="dark"] #serviceDate,
+        [data-theme="dark"] #serviceType,
+        [data-theme="dark"] #attSearch,
+        [data-theme="dark"] #filterGroup,
+        [data-theme="dark"] #filterGender,
+        [data-theme="dark"] .finance-form input,
+        [data-theme="dark"] .finance-form select {
+            background: #162a18 !important;
             color: var(--text) !important;
             border-color: var(--border) !important;
         }
-        /* Modals always stay white regardless of dark mode */
-        .modal-backdrop .modal,
-        .modal-backdrop .modal * {
-            /* inherits white from .modal { background:#ffffff !important } */
-        }
+        [data-theme="dark"] .active-status  { background: #1b4d1c !important; color: #81c784 !important; }
+        [data-theme="dark"] .visitor-status { background: #3d3000 !important; color: #ffd54f !important; }
+        [data-theme="dark"] .tag-good       { background: #1b4d1c !important; color: #81c784 !important; }
+        [data-theme="dark"] .tag-repair     { background: #3d3000 !important; color: #ffd54f !important; }
+        [data-theme="dark"] .tag-missing    { background: #4a1010 !important; color: #ef9a9a !important; }
+        [data-theme="dark"] .edit-btn       { color: #81c784 !important; }
+        [data-theme="dark"] .delete-btn     { color: #ef9a9a !important; }
+        [data-theme="dark"] .badge-absent   { background: #4a1010 !important; color: #ef9a9a !important; }
+        [data-theme="dark"] .badge-present  { background: #1b4d1c !important; color: #81c784 !important; }
+        [data-theme="dark"] .icon-btn       { background: var(--card-bg) !important; border-color: var(--border) !important; color: var(--text) !important; }
+        [data-theme="dark"] .amount-in      { color: #81c784 !important; }
+        [data-theme="dark"] .amount-out     { color: #ef9a9a !important; }
+        [data-theme="dark"] .current-date   { color: var(--text-grey) !important; }
+        [data-theme="dark"] #lowStockPanel  { background: #2a1a0a !important; border-color: #5d3a00 !important; }
+        [data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg); }
+        [data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        /* Modals ALWAYS stay white */
+        .modal-backdrop .modal { background: #ffffff !important; color: #111 !important; }
+        .modal-backdrop .modal h2,
+        .modal-backdrop .modal label { color: #1b5e20 !important; }
         .modal-backdrop .form-group input,
-        .modal-backdrop .form-group select {
-            background-color: #ffffff !important;
-            color: #111111 !important;
-            border-color: #bbb !important;
-        }
-        .modal-backdrop .form-group label {
-            color: #1b5e20 !important;
-        }
-
+        .modal-backdrop .form-group select { background: #ffffff !important; color: #111111 !important; border: 1.5px solid #bbb !important; }
+        body { transition: background 0.3s, color 0.3s; }
         /* ── Top Bar ─────────────────────────────────────────── */
         .top-bar {
             position: fixed; top: 0; left: 0; right: 0; height: 52px;
@@ -713,7 +762,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
