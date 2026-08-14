@@ -703,11 +703,29 @@
         [data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg); }
         [data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
         /* Modals ALWAYS stay white */
-        .modal-backdrop .modal { background: #ffffff !important; color: #111 !important; }
-        .modal-backdrop .modal h2,
-        .modal-backdrop .modal label { color: #1b5e20 !important; }
+        /* Modals always white and fully readable regardless of theme */
+        .modal-backdrop .modal {
+            background: #ffffff !important;
+            color: #111111 !important;
+            color-scheme: light !important;
+        }
+        .modal-backdrop .modal h2  { color: #1b5e20 !important; }
+        .modal-backdrop .modal label { color: #1b5e20 !important; font-weight: 600 !important; }
+        .modal-backdrop .modal p   { color: #555 !important; }
+        .modal-backdrop .modal small,
+        .modal-backdrop .modal #memberIdHint { color: #777 !important; }
         .modal-backdrop .form-group input,
-        .modal-backdrop .form-group select { background: #ffffff !important; color: #111111 !important; border: 1.5px solid #bbb !important; }
+        .modal-backdrop .form-group select {
+            background: #ffffff !important;
+            color: #111111 !important;
+            border: 1.5px solid #ccc !important;
+            -webkit-text-fill-color: #111111 !important;
+        }
+        .modal-backdrop .form-group input::placeholder { color: #aaa !important; -webkit-text-fill-color: #aaa !important; }
+        .modal-backdrop .form-group input:focus,
+        .modal-backdrop .form-group select:focus { border-color: #2e7d32 !important; outline: none !important; }
+        .modal-backdrop .save-btn   { background: #2e7d32 !important; color: #fff !important; }
+        .modal-backdrop .cancel-btn { background: #eee !important; color: #555 !important; }
         body { transition: background 0.3s, color 0.3s; }
         /* ── Top Bar ─────────────────────────────────────────── */
         .top-bar {
@@ -771,7 +789,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <img src="ICGCNCT.png" alt="Logo">
+            <img src="ICGCNCT.PNG" alt="Logo">
             <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
         </div>
@@ -1521,39 +1539,51 @@
         // ── Member List Modal ─────────────────────────────────
         async function openMemberListModal() {
             const members = await getMembers();
+            const isDark  = document.documentElement.getAttribute('data-theme') === 'dark';
+            const bg      = isDark ? '#1a2b1c' : '#fff';
+            const bg2     = isDark ? '#162a18' : '#f9f9f9';
+            const border  = isDark ? '#2d4a2f' : '#eee';
+            const text    = isDark ? '#e8f0e8' : '#222';
+            const subtext = isDark ? '#9ab09c' : '#888';
+            const inputBg = isDark ? '#0f1710' : '#fff';
+
             const modal   = document.createElement('div');
             modal.id      = 'memberListModal';
-            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:5000;display:flex;justify-content:center;align-items:center;padding:16px;';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:5000;display:flex;justify-content:center;align-items:center;padding:16px;';
             const gIcon = { male:'👨', female:'👩', child:'🧒' };
             const rows  = members.length
-                ? members.map((m,i) => `<tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:9px 12px;font-size:0.82rem;color:#aaa;">${i+1}</td>
-                    <td style="padding:9px 12px;font-weight:600;font-size:0.88rem;">${m.name}</td>
-                    <td style="padding:9px 12px;font-size:0.8rem;color:#555;">${m.dept||'—'}</td>
-                    <td style="padding:9px 12px;font-size:0.8rem;">${gIcon[m.gender]||'👤'} ${m.gender||'—'}</td>
-                    <td style="padding:9px 12px;"><span style="background:${m.status==='active'?'#c8e6c9':'#fff9c4'};color:${m.status==='active'?'#2e7d32':'#f9a825'};padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;">${m.status==='active'?'Active':'Visitor'}</span></td>
+                ? members.map((m,i) => `<tr style="border-bottom:1px solid ${border};">
+                    <td style="padding:9px 12px;font-size:0.82rem;color:${subtext};">${i+1}</td>
+                    <td style="padding:9px 12px;font-weight:600;font-size:0.88rem;color:${text};">${m.name}</td>
+                    <td style="padding:9px 12px;font-size:0.8rem;color:${subtext};">${m.dept||'—'}</td>
+                    <td style="padding:9px 12px;font-size:0.8rem;color:${text};">${gIcon[m.gender]||'👤'} ${m.gender||'—'}</td>
+                    <td style="padding:9px 12px;"><span style="background:${m.status==='active'?'#1b4d1c':'#3d3000'};color:${m.status==='active'?'#81c784':'#ffd54f'};padding:2px 8px;border-radius:10px;font-size:0.72rem;font-weight:700;">${m.status==='active'?'Active':'Visitor'}</span></td>
                   </tr>`).join('')
-                : '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">No members yet.</td></tr>';
+                : `<tr><td colspan="5" style="text-align:center;padding:30px;color:${subtext};">No members yet.</td></tr>`;
+
             modal.innerHTML = `
-                <div style="background:#fff;border-radius:14px;width:600px;max-width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.25);">
-                    <div style="padding:16px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
-                        <div><h2 style="color:#1b5e20;font-size:1.05rem;">👥 All Members</h2>
-                        <p style="font-size:0.78rem;color:#888;margin-top:2px;">${members.length} member${members.length!==1?'s':''}</p></div>
-                        <button onclick="document.getElementById('memberListModal').remove()" style="background:#eee;border:none;border-radius:8px;padding:7px 14px;font-weight:700;cursor:pointer;">✕</button>
+                <div style="background:${bg};border-radius:14px;width:600px;max-width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.4);">
+                    <div style="padding:16px 20px;border-bottom:1px solid ${border};display:flex;justify-content:space-between;align-items:center;background:${bg2};">
+                        <div>
+                            <h2 style="color:#4caf50;font-size:1.05rem;">👥 All Members</h2>
+                            <p style="font-size:0.78rem;color:${subtext};margin-top:2px;">${members.length} member${members.length!==1?'s':''}</p>
+                        </div>
+                        <button onclick="document.getElementById('memberListModal').remove()"
+                            style="background:${isDark?'#2d4a2f':'#eee'};border:none;border-radius:8px;padding:7px 14px;font-weight:700;cursor:pointer;color:${text};">✕</button>
                     </div>
-                    <div style="padding:10px 18px;border-bottom:1px solid #eee;">
+                    <div style="padding:10px 18px;border-bottom:1px solid ${border};background:${bg};">
                         <input type="text" placeholder="Search..." oninput="filterMemberModal(this.value)"
-                            style="width:100%;padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88rem;outline:none;background:#fff;color:#222;">
+                            style="width:100%;padding:8px 12px;border:1.5px solid ${border};border-radius:8px;font-size:0.88rem;outline:none;background:${inputBg};color:${text};">
                     </div>
-                    <div style="overflow-y:auto;flex:1;">
+                    <div style="overflow-y:auto;flex:1;background:${bg};">
                         <table style="width:100%;border-collapse:collapse;">
-                            <thead style="position:sticky;top:0;background:#f9f9f9;">
+                            <thead style="position:sticky;top:0;background:${bg2};z-index:1;">
                                 <tr>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">#</th>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Name</th>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Dept</th>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Gender</th>
-                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#888;border-bottom:2px solid #eee;">Status</th>
+                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#4caf50;border-bottom:2px solid ${border};">#</th>
+                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#4caf50;border-bottom:2px solid ${border};">Name</th>
+                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#4caf50;border-bottom:2px solid ${border};">Dept</th>
+                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#4caf50;border-bottom:2px solid ${border};">Gender</th>
+                                    <th style="padding:9px 12px;text-align:left;font-size:0.75rem;color:#4caf50;border-bottom:2px solid ${border};">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="memberModalBody">${rows}</tbody>
