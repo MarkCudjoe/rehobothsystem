@@ -27,7 +27,7 @@
 
         /* Top Bar */
         .top-bar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--bg);border-bottom:1px solid #ddd;display:flex;align-items:center;justify-content:space-between;padding:0 14px;z-index:1000;}
-        .menu-btn{background:var(--dark);color:white;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:0.88rem;}
+        .menu-btn{background:#1b5e20;color:white;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:0.88rem;}
         .icon-btn{background:#fff;border:1px solid #ddd;color:#333;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-weight:600;}
 
         /* Main */
@@ -119,13 +119,60 @@
         .btn-cancel-logout{flex:1;background:#eee;color:#555;padding:11px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
 
         /* Dark Mode */
-        [data-theme="dark"] body{background:#121212;}
-        [data-theme="dark"] .stat-card,[data-theme="dark"] .gender-card,[data-theme="dark"] .session-card,
-        [data-theme="dark"] .sf-card,[data-theme="dark"] .attendance-card,[data-theme="dark"] .history-card{background:#1e1e1e;}
-        [data-theme="dark"] .top-bar{background:#1a1a1a;border-color:#333;}
-        [data-theme="dark"] th,[data-theme="dark"] td{color:#ddd;}
-        [data-theme="dark"] .stat-card h3{color:#aaa;}
-        .session-field input,.session-field select,.att-search,.filter-row select{background-color:#ffffff !important;color:#111111 !important;}
+        [data-theme="dark"] body { background:#0f1710; color:#e8f0e8; }
+        [data-theme="dark"] .main-content { background:#0f1710; }
+        [data-theme="dark"] .top-bar { background:#0f1710 !important; border-color:#2d4a2f !important; }
+        [data-theme="dark"] .menu-btn { background:#2e7d32 !important; color:white !important; }
+        [data-theme="dark"] .stat-card,
+        [data-theme="dark"] .gender-card,
+        [data-theme="dark"] .session-card,
+        [data-theme="dark"] .sf-card,
+        [data-theme="dark"] .attendance-card,
+        [data-theme="dark"] .history-card { background:#1a2b1c !important; border-color:#2d4a2f !important; color:#e8f0e8 !important; }
+        [data-theme="dark"] .stat-card h3 { color:#9ab09c !important; }
+        [data-theme="dark"] .stat-card p  { color:#e8f0e8 !important; }
+        [data-theme="dark"] th { color:#4caf50 !important; border-color:#2d4a2f !important; background:#1e2f1f !important; }
+        [data-theme="dark"] td { color:#e8f0e8 !important; border-color:#2d4a2f !important; background:#1a2b1c !important; }
+        [data-theme="dark"] tr { background:#1a2b1c !important; }
+        [data-theme="dark"] tr:hover td { background:#1e2f1f !important; }
+        [data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3 { color:#e8f0e8 !important; }
+        [data-theme="dark"] .header h1 { color:#81c784 !important; }
+        [data-theme="dark"] .section-title { color:#81c784 !important; }
+
+        /* ALL inputs/selects in dark mode */
+        [data-theme="dark"] input[type="date"],
+        [data-theme="dark"] input[type="text"],
+        [data-theme="dark"] select,
+        [data-theme="dark"] .session-field input,
+        [data-theme="dark"] .session-field select,
+        [data-theme="dark"] .att-search,
+        [data-theme="dark"] .filter-row select,
+        [data-theme="dark"] #serviceDate,
+        [data-theme="dark"] #serviceType,
+        [data-theme="dark"] #attSearch,
+        [data-theme="dark"] #filterGroup,
+        [data-theme="dark"] #filterGender {
+            background:#162a18 !important;
+            color:#e8f0e8 !important;
+            border-color:#2d4a2f !important;
+            -webkit-text-fill-color:#e8f0e8 !important;
+            color-scheme: dark !important;
+        }
+
+        [data-theme="dark"] .badge-absent  { background:#4a1010 !important; color:#ef9a9a !important; }
+        [data-theme="dark"] .badge-present { background:#1b4d1c !important; color:#81c784 !important; }
+        [data-theme="dark"] .icon-btn { background:#1a2b1c !important; border-color:#2d4a2f !important; color:#e8f0e8 !important; }
+        [data-theme="dark"] .present-pill { background:#162a18 !important; color:#81c784 !important; }\
+        [data-theme="dark"] .tab-btn { background:#1a2b1c !important; color:#e8f0e8 !important; border:1px solid #2d4a2f !important; }
+        [data-theme="dark"] .current-date { color:#9ab09c !important; }
+        [data-theme="dark"] .active-status  { background:#1b4d1c !important; color:#81c784 !important; }
+        [data-theme="dark"] .visitor-status { background:#3d3000 !important; color:#ffd54f !important; }
+        [data-theme="dark"] .slider { background:#2d4a2f !important; }
+        [data-theme="dark"] ::-webkit-scrollbar-track { background:#0f1710; }
+        [data-theme="dark"] ::-webkit-scrollbar-thumb { background:#2d4a2f; border-radius:4px; }
+        .modal-backdrop .logout-modal { background:#ffffff !important; color:#111 !important; }
+        .modal-backdrop .logout-modal h2 { color:#1b5e20 !important; }
+        body { transition: background 0.3s, color 0.3s; }
     </style>
 </head>
 <body>
@@ -165,7 +212,7 @@
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <img src="ICGCNCT.png" alt="Logo">
+        <img src="ICGCNCT.PNG" alt="Logo">
         <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
     </div>
@@ -176,8 +223,8 @@
         <a href="inventory.html" style="text-decoration:none;color:inherit;"><li class="nav-item">📦 Inventory</li></a>
         <a href="attendance.html" style="text-decoration:none;color:inherit;"><li class="nav-item active">✅ Attendance</li></a>
         <a href="scanner.html" style="text-decoration:none;color:inherit;"><li class="nav-item">📷 QR Scanner</li></a>
+            <li class="nav-item" onclick="confirmLogout()" style="background:#c62828;color:white;margin-top:14px;text-align:center;justify-content:center;">🔒 Logout</li>
     </ul>
-    <button class="logout-btn" onclick="confirmLogout()">🔒 Logout</button>
 </div>
 
 <!-- Main -->
