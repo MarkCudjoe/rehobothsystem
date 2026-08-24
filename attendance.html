@@ -212,7 +212,7 @@
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <img src="ICGCNCT.png" alt="Logo">
+        <img src="ICGCNCT.PNG" alt="Logo">
         <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
     </div>
@@ -281,7 +281,7 @@
     <!-- Tabs -->
     <div class="tab-row">
         <button id="tabMarkBtn" class="tab-btn" onclick="switchTab('mark')" style="background:#2e7d32;color:white;">✅ Mark Attendance</button>
-        <button id="tabHistoryBtn" class="tab-btn" onclick="switchTab('history')" style="background:white;color:#2e7d32;border:2px solid #2e7d32;">🕓 History</button>
+        <button id="tabHistoryBtn" class="tab-btn" onclick="switchTab('history')" style="background:var(--card-bg,white);color:var(--primary-green,#2e7d32);border:2px solid var(--primary-green,#2e7d32);">🕓 History</button>
         <a href="scanner.html" style="text-decoration:none;"><button class="tab-btn" style="background:#7b1fa2;color:white;">📷 QR Scanner</button></a>
         <a href="qrcodes.html" style="text-decoration:none;"><button class="tab-btn" style="background:#1565c0;color:white;">🔲 QR Code</button></a>
     </div>
@@ -458,10 +458,11 @@
         const hb = document.getElementById('tabHistoryBtn');
         if (tab==='mark') {
             mb.style.cssText='background:#2e7d32;color:white;border:none;';
-            hb.style.cssText='background:white;color:#2e7d32;border:2px solid #2e7d32;';
+            const dm = document.documentElement.getAttribute('data-theme')==='dark';
+            hb.style.cssText=`background:${dm?'#1a2b1c':'white'};color:#4caf50;border:2px solid #2e7d32;`;
         } else {
             hb.style.cssText='background:#2e7d32;color:white;border:none;';
-            mb.style.cssText='background:white;color:#2e7d32;border:2px solid #2e7d32;';
+            mb.style.cssText=`background:${dm?'#1a2b1c':'white'};color:#4caf50;border:2px solid #2e7d32;`;
             renderHistory();
         }
     }
@@ -671,11 +672,17 @@
                 const pct     = total ? Math.round((present.length/total)*100) : 0;
                 const gc      = {};
                 att.forEach(a => { const g=a.gender||'unspec'; gc[g]=(gc[g]||0)+1; });
-                return `<div style="border:1px solid #eee;border-radius:10px;padding:16px;margin-bottom:12px;background:#fafafa;">
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const cardBg  = isDark ? '#1a2b1c' : '#fafafa';
+                const cardBdr = isDark ? '#2d4a2f' : '#eee';
+                const headCol = isDark ? '#81c784' : '#1b5e20';
+                const subCol  = isDark ? '#9ab09c' : '#aaa';
+                const textCol = isDark ? '#e8f0e8' : '#333';
+                return `<div style="border:1px solid ${cardBdr};border-radius:10px;padding:16px;margin-bottom:12px;background:${cardBg};">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
                         <div>
-                            <div style="font-weight:700;color:#1b5e20;">📅 ${s.session_date} — ${s.service}</div>
-                            <div style="font-size:0.78rem;color:#aaa;">Submitted: ${new Date(s.submitted_at).toLocaleString()}</div>
+                            <div style="font-weight:700;color:${headCol};">📅 ${s.session_date} — ${s.service}</div>
+                            <div style="font-size:0.78rem;color:${subCol};">Submitted: ${new Date(s.submitted_at).toLocaleString()}</div>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <span style="background:#c8e6c9;color:#2e7d32;padding:3px 10px;border-radius:20px;font-size:0.82rem;font-weight:700;">✅ ${present.length}</span>
@@ -685,7 +692,7 @@
                     <div style="margin-top:10px;background:#eee;border-radius:6px;height:8px;">
                         <div style="width:${pct}%;background:#2e7d32;border-radius:6px;height:8px;"></div>
                     </div>
-                    <div style="font-size:0.75rem;color:#888;margin-top:3px;">${pct}% attendance rate</div>
+                    <div style="font-size:0.75rem;color:${subCol};margin-top:3px;">${pct}% attendance rate</div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
                         ${gc.male   ? `<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;">👨 ${gc.male}</span>` : ''}
                         ${gc.female ? `<span style="background:#fce4ec;color:#c2185b;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;">👩 ${gc.female}</span>` : ''}
