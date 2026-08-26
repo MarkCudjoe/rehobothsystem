@@ -212,7 +212,7 @@
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <img src="ICGCNCT.png" alt="Logo">
+        <img src="ICGCNCT.PNG" alt="Logo">
         <h3 id="sidebarName">ICGC Admin</h3>
         <div class="church-branch" id="sidebarBranch"></div>
     </div>
@@ -456,9 +456,9 @@
         document.getElementById('panelHistory').style.display = tab==='history' ? '' : 'none';
         const mb = document.getElementById('tabMarkBtn');
         const hb = document.getElementById('tabHistoryBtn');
+        const dm = document.documentElement.getAttribute('data-theme') === 'dark';
         if (tab==='mark') {
             mb.style.cssText='background:#2e7d32;color:white;border:none;';
-            const dm = document.documentElement.getAttribute('data-theme')==='dark';
             hb.style.cssText=`background:${dm?'#1a2b1c':'white'};color:#4caf50;border:2px solid #2e7d32;`;
         } else {
             hb.style.cssText='background:#2e7d32;color:white;border:none;';
